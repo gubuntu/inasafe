@@ -1,13 +1,18 @@
 # coding=utf-8
 """Definitions relating to default setting of fresh InaSAFE."""
-from os.path import expanduser, abspath, join
-# from safe.utilities.resources import resources_path
+from os.path import join
+
+from qgis.core import QgsApplication
+
+from safe.definitions.currencies import idr
+
 
 inasafe_default_settings = {
     'visibleLayersOnlyFlag': True,
     'set_layer_from_title_flag': True,
     'setZoomToImpactFlag': True,
     'set_show_only_impact_on_report': False,
+    'print_atlas_report': False,
     'setHideExposureFlag': False,
     'useSelectedFeaturesOnly': True,
     'useSentry': False,
@@ -20,11 +25,16 @@ inasafe_default_settings = {
     'ISO19115_ORGANIZATION': 'InaSAFE.org',
     'ISO19115_URL': 'http://inasafe.org',
     'ISO19115_EMAIL': 'info@inasafe.org',
-    'ISO19115_TITLE': 'InaSAFE analysis result',
     'ISO19115_LICENSE': 'Free use with accreditation',
 
-    'keywordCachePath': abspath(join(
-        expanduser('~'), '.inasafe', 'keywords.db')),
+    # Welcome message
+    'always_show_welcome_message': True,
+    'previous_version': '0.0.0',  # It will be set in plugin, no need to worry
+
+    'currency': idr['key'],
+
+    'keywordCachePath': join(
+        QgsApplication.qgisSettingsDirPath(), 'inasafe', 'metadata.db')
 
     # Make sure first to not have cyclic import
     # 'organisation_logo_path': resources_path(

@@ -1,27 +1,30 @@
 # coding=utf-8
-"""InaSAFE Wizard Step for Choosing Layer Geometry"""
+"""InaSAFE Wizard Step for Choosing Layer Geometry."""
 
 import logging
+
 # noinspection PyPackageRequirements
 from PyQt4 import QtCore, QtGui
 from PyQt4.QtCore import pyqtSignature
 
-from safe.definitions.utilities import get_allowed_geometries
+from safe import messaging as m
+from safe.definitions.font import big_font
 from safe.definitions.layer_purposes import (
     layer_purpose_exposure, layer_purpose_hazard)
 from safe.definitions.styles import (
     available_option_color, unavailable_option_color)
-from safe.definitions.font import big_font
-from safe.gui.tools.wizard.wizard_step import WizardStep
-from safe.gui.tools.wizard.wizard_step import get_wizard_step_ui_class
-from safe.gui.tools.wizard.wizard_strings import (
-    select_function_constraints2_question)
-from safe.gui.tools.wizard.wizard_utils import (
+from safe.definitions.utilities import get_allowed_geometries
+from safe.gui.tools.wizard.utilities import (
     RoleFunctions,
     RoleHazard,
     RoleExposure,
     RoleHazardConstraint,
     RoleExposureConstraint)
+from safe.gui.tools.wizard.wizard_step import WizardStep
+from safe.gui.tools.wizard.wizard_step import get_wizard_step_ui_class
+from safe.gui.tools.wizard.wizard_strings import (
+    select_function_constraints2_question)
+from safe.utilities.i18n import tr
 
 __copyright__ = "Copyright 2016, The InaSAFE Project"
 __license__ = "GPL version 3"
@@ -172,7 +175,7 @@ class StepFcFunctions2(WizardStep, FORM_CLASS):
                     'allowed_geometries']
                 exposure_geometry_allowed = (
                     exposure_geometry['key'] in exposure[
-                            'allowed_geometries'])
+                        'allowed_geometries'])
 
                 if hazard_geometry_allowed and exposure_geometry_allowed:
                     background_color = available_option_color
@@ -196,3 +199,32 @@ class StepFcFunctions2(WizardStep, FORM_CLASS):
             active_items[0].setSelected(True)
             # set focus, as the inactive selection style is gray
             self.tblFunctions2.setFocus()
+
+    @property
+    def step_name(self):
+        """Get the human friendly name for the wizard step.
+
+        :returns: The name of the wizard step.
+        :rtype: str
+        """
+        return tr('Impact Function Filter by Layer Geometry Step')
+
+    def help_content(self):
+        """Return the content of help for this step wizard.
+
+            We only needs to re-implement this method in each wizard step.
+
+        :returns: A message object contains help.
+        :rtype: m.Message
+        """
+        message = m.Message()
+        message.add(m.Paragraph(tr(
+            'In this wizard step: {step_name}, there is a grid that shows all '
+            'possible combination for hazard and exposure based on the layer '
+            'geometry that can be run in InaSAFE. You can select a grid cell '
+            'where your intended exposure and hazard intersect. This will '
+            'help you to choose the layer that is suitable for the analysis. '
+            'You can only select the green grid cell. The grey color '
+            'indicates that the combination is not supported by InaSAFE.'
+        ).format(step_name=self.step_name)))
+        return message

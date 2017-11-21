@@ -174,12 +174,41 @@ class TestPrepareLayer(unittest.TestCase):
         layer = _check_value_mapping(layer)
         self.assertDictEqual(expected_value_map, layer.keywords['value_map'])
 
+    def test_own_id_column(self):
+        """Test if we can re-use the column ID from the user."""
+        layer = load_test_vector_layer(
+            'gisv4', 'exposure', 'buildings.geojson', clone=True)
+        # This layer is set to use custom ID column. We should have the values
+        # after preparing the vector layer.
+        field = layer.fieldNameIndex(exposure_id_field['field_name'])
+        self.assertNotEqual(-1, field)
+        unique_values_before = layer.uniqueValues(field)
+        self.assertEqual(
+            unique_values_before,
+            [10, 11, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110])
+        _add_id_column(layer)
+        field = layer.fieldNameIndex(exposure_id_field['field_name'])
+        self.assertNotEqual(-1, field)
+        unique_values_after = layer.uniqueValues(field)
+        self.assertEqual(unique_values_after, unique_values_before)
+
+        # Let's remove the keyword now to use the auto-increment ID
+        del layer.keywords['inasafe_fields'][exposure_id_field['key']]
+        _add_id_column(layer)
+        field = layer.fieldNameIndex(exposure_id_field['field_name'])
+        self.assertNotEqual(-1, field)
+        unique_values_automatic = layer.uniqueValues(field)
+        self.assertNotEqual(unique_values_automatic, unique_values_before)
+        self.assertEqual(unique_values_automatic, range(layer.featureCount()))
+
     def test_sum_fields(self):
         """Test sum_fields method."""
         layer = load_test_vector_layer(
             'gisv4', 'exposure', 'population_multi_fields.geojson', clone=True)
-        sum_fields(layer, 'exposure_id', ['F_0_4', 'F_5_9', 'F_9_15'])
-        exposure_id__idx = layer.fieldNameIndex('exposure_id')
+        sum_fields(
+            layer, exposure_id_field['key'], ['F_0_4', 'F_5_9', 'F_9_15'])
+        exposure_id__idx = layer.fieldNameIndex(
+            exposure_id_field['field_name'])
         F_0_4__idx = layer.fieldNameIndex('F_0_4')
         F_5_9__idx = layer.fieldNameIndex('F_5_9')
         F_9_15__idx = layer.fieldNameIndex('F_9_15')
@@ -189,11 +218,11 @@ class TestPrepareLayer(unittest.TestCase):
                     F_9_15__idx])
             self.assertEqual(feature[exposure_id__idx], sum_value)
 
-        new_field__idx = layer.fieldNameIndex('new_field')
+        new_field__idx = layer.fieldNameIndex(female_count_field['field_name'])
         # Check if the new field doesn't exist
         self.assertEqual(new_field__idx, -1)
-        sum_fields(layer, 'new_field', ['F_0_4', 'F_5_9'])
-        new_field__idx = layer.fieldNameIndex('new_field')
+        sum_fields(layer, female_count_field['key'], ['F_0_4', 'F_5_9'])
+        new_field__idx = layer.fieldNameIndex(female_count_field['field_name'])
         for feature in layer.getFeatures():
             sum_value = (feature[F_0_4__idx] + feature[F_5_9__idx])
             self.assertEqual(feature[new_field__idx], sum_value)

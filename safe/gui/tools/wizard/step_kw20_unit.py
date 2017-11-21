@@ -1,20 +1,21 @@
 # coding=utf-8
-"""InaSAFE Keyword Wizard Unit Step."""
+"""InaSAFE Wizard Step Layer Unit."""
 
 # noinspection PyPackageRequirements
 from PyQt4 import QtCore
 from PyQt4.QtGui import QListWidgetItem
 
-from safe.definitions.layer_purposes import layer_purpose_hazard
-from safe.definitions.exposure import exposure_population
-from safe.definitions.units import exposure_unit
+from safe import messaging as m
 from safe.definitions.hazard import continuous_hazard_unit
+from safe.definitions.layer_purposes import layer_purpose_hazard
+from safe.definitions.units import exposure_unit
 from safe.definitions.utilities import (
     definition, hazard_units, exposure_units, get_classifications)
 from safe.gui.tools.wizard.wizard_step import (
     get_wizard_step_ui_class, WizardStep)
 from safe.gui.tools.wizard.wizard_strings import unit_question
 from safe.utilities.gis import is_raster_layer
+from safe.utilities.i18n import tr
 
 __copyright__ = "Copyright 2016, The InaSAFE Project"
 __license__ = "GPL version 3"
@@ -26,7 +27,7 @@ FORM_CLASS = get_wizard_step_ui_class(__file__)
 
 class StepKwUnit(WizardStep, FORM_CLASS):
 
-    """Keyword Wizard Step: Unit."""
+    """InaSAFE Wizard Step Layer Unit."""
 
     def is_ready_to_next_step(self):
         """Check if the step is complete.
@@ -54,11 +55,8 @@ class StepKwUnit(WizardStep, FORM_CLASS):
         # Raster and has classifications
         elif has_classifications:
             return self.parent.step_kw_multi_classifications
-        # If population, must go to resample step first
-        elif subcategory == exposure_population:
-            return self.parent.step_kw_resample
-        else:
-            return self.parent.step_kw_source
+        # else go to source
+        return self.parent.step_kw_source
 
     # noinspection PyPep8Naming
     def on_lstUnits_itemSelectionChanged(self):
@@ -131,3 +129,28 @@ class StepKwUnit(WizardStep, FORM_CLASS):
                 self.lstUnits.setCurrentRow(units.index(unit_id))
 
         self.auto_select_one_item(self.lstUnits)
+
+    @property
+    def step_name(self):
+        """Get the human friendly name for the wizard step.
+
+        :returns: The name of the wizard step.
+        :rtype: str
+        """
+        return tr('Layer Unit Step')
+
+    def help_content(self):
+        """Return the content of help for this step wizard.
+
+            We only needs to re-implement this method in each wizard step.
+
+        :returns: A message object contains help.
+        :rtype: m.Message
+        """
+        message = m.Message()
+        message.add(m.Paragraph(tr(
+            'In this wizard step: {step_name}, you will be able to set the '
+            'unit of the layer that is being assigned in this wizard. This '
+            'only applies for continuous layer.'
+        ).format(step_name=self.step_name)))
+        return message

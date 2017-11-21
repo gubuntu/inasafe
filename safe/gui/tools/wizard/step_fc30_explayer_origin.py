@@ -1,30 +1,18 @@
 # coding=utf-8
-"""
-InaSAFE Disaster risk assessment tool by AusAid -**InaSAFE Wizard**
-
-This module provides: Function Centric Wizard Step: Exposure Layer Origin
-
-Contact : ole.moller.nielsen@gmail.com
-
-.. note:: This program is free software; you can redistribute it and/or modify
-     it under the terms of the GNU General Public License as published by
-     the Free Software Foundation; either version 2 of the License, or
-     (at your option) any later version.
-
-"""
+"""InaSAFE Wizard Step Exposure Layer Origin."""
 
 # noinspection PyPackageRequirements
 from PyQt4.QtGui import QPixmap
 
-from safe.utilities.i18n import tr
-from safe.utilities.resources import resources_path
-
+from safe import messaging as m
+from safe.gui.tools.wizard.utilities import get_image_path
+from safe.gui.tools.wizard.wizard_step import (
+    WizardStep, get_wizard_step_ui_class)
 from safe.gui.tools.wizard.wizard_strings import (
     select_exposure_origin_question,
     select_explayer_from_canvas_question,
     select_explayer_from_browser_question)
-from safe.gui.tools.wizard.wizard_step import get_wizard_step_ui_class
-from safe.gui.tools.wizard.wizard_step import WizardStep
+from safe.utilities.i18n import tr
 
 __copyright__ = "Copyright 2016, The InaSAFE Project"
 __license__ = "GPL version 3"
@@ -35,7 +23,7 @@ FORM_CLASS = get_wizard_step_ui_class(__file__)
 
 
 class StepFcExpLayerOrigin(WizardStep, FORM_CLASS):
-    """Function Centric Wizard Step: Exposure Layer Origin"""
+    """InaSAFE Wizard Step Exposure Layer Origin."""
 
     def is_ready_to_next_step(self):
         """Check if the step is complete. If so, there is
@@ -78,7 +66,7 @@ class StepFcExpLayerOrigin(WizardStep, FORM_CLASS):
         self.parent.pbnNext.setEnabled(True)
 
     def set_widgets(self):
-        """Set widgets on the Exposure Layer Origin Type tab"""
+        """Set widgets on the Exposure Layer Origin Type tab."""
         # First, list available layers in order to check if there are
         # any available layers. Note This will be repeated in
         # set_widgets_step_fc_explayer_from_canvas because we need
@@ -88,7 +76,6 @@ class StepFcExpLayerOrigin(WizardStep, FORM_CLASS):
         lst_wdg = self.parent.step_fc_explayer_from_canvas.lstCanvasExpLayers
         if lst_wdg.count():
             self.rbExpLayerFromCanvas.setText(tr(
-
                 'I would like to use an exposure layer already loaded in QGIS'
                 '\n'
                 '(launches the %s for exposure if needed)'
@@ -125,7 +112,30 @@ class StepFcExpLayerOrigin(WizardStep, FORM_CLASS):
             setText(text)
 
         # Set icon
-        icon_path = resources_path(
-            'img', 'wizard', 'keyword-subcategory-%s.svg' % (
-                exposure['key'] or 'notset'))
+        icon_path = get_image_path(exposure)
         self.lblIconIFCWExposureOrigin.setPixmap(QPixmap(icon_path))
+
+    @property
+    def step_name(self):
+        """Get the human friendly name for the wizard step.
+
+        :returns: The name of the wizard step.
+        :rtype: str
+        """
+        return tr('Exposure Layer Origin')
+
+    def help_content(self):
+        """Return the content of help for this step wizard.
+
+            We only needs to re-implement this method in each wizard step.
+
+        :returns: A message object contains help.
+        :rtype: m.Message
+        """
+        message = m.Message()
+        message.add(m.Paragraph(tr(
+            'In this wizard step: {step_name}, you can choose where your '
+            'exposure layer come from. The option for choosing exposure layer '
+            'from QGIS can not be chosen if there is no exposure layer in '
+            'QGIS.').format(step_name=self.step_name)))
+        return message

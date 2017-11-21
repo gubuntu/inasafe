@@ -21,16 +21,17 @@ import time
 
 # This import is to enable SIP API V2
 # noinspection PyUnresolvedReferences
-import qgis  # pylint: disable=unused-import
+import qgis  # NOQA pylint: disable=unused-import
 from PyQt4 import QtCore, QtGui, QtWebKit
 
 from safe import messaging as m
-from safe.messaging.message import MessageElement
 from safe.common.exceptions import InvalidParameterError
-from safe.utilities.utilities import html_to_file, open_in_browser
+from safe.messaging.message import MessageElement
 from safe.utilities.qt import qt_at_least
-from safe.utilities.utilities import unique_filename
 from safe.utilities.resources import html_footer, html_header, resources_path
+from safe.utilities.settings import setting
+from safe.utilities.utilities import (
+    html_to_file, open_in_browser, unique_filename)
 
 DYNAMIC_MESSAGE_SIGNAL = 'ImpactFunctionMessage'
 STATIC_MESSAGE_SIGNAL = 'ApplicationMessage'
@@ -40,12 +41,14 @@ LOGGER = logging.getLogger('InaSAFE')
 
 
 class MessageViewer(QtWebKit.QWebView):
-    """A simple message queue"""
+
+    """A simple message queue."""
+
     static_message_count = 0
 
     # noinspection PyOldStyleClasses
     def __init__(self, the_parent):
-        _ = the_parent  # needed for promoted Qt widget in designer
+        _ = the_parent  # NOQA needed for promoted Qt widget in designer
         super(MessageViewer, self).__init__()
         self.setWindowTitle('Message Viewer')
         # We use this var to keep track of the last allocated div id
@@ -53,8 +56,7 @@ class MessageViewer(QtWebKit.QWebView):
         self.last_id = 0
 
         # whether to show or not dev only options
-        self.dev_mode = QtCore.QSettings().value(
-            'inasafe/developer_mode', False, type=bool)
+        self.dev_mode = setting('developer_mode', False, expected_type=bool)
 
         if self.dev_mode:
             self.settings().globalSettings().setAttribute(
@@ -191,7 +193,7 @@ class MessageViewer(QtWebKit.QWebView):
         if message == self.static_message:
             return
         # LOGGER.debug('Static message event %i' % self.static_message_count)
-        _ = sender  # we arent using it
+        _ = sender  # NOQA
         self.dynamic_messages = []
         self.static_message = message
         self.show_messages()
@@ -223,7 +225,7 @@ class MessageViewer(QtWebKit.QWebView):
         :type message: safe.messaging.Message
         """
         # LOGGER.debug('Dynamic message event')
-        _ = sender  # we arent using it
+        _ = sender  # NOQA
         self.dynamic_messages.append(message)
         self.dynamic_messages_log.append(message)
         # Old way (works but causes full page refresh)
@@ -374,18 +376,7 @@ class MessageViewer(QtWebKit.QWebView):
         printer.setOutputFormat(QtGui.QPrinter.PdfFormat)
         report_path = unique_filename(suffix='.pdf')
         printer.setOutputFileName(report_path)
-
-        # We implement this to make sure the layout is just as good as
-        # in the browser.
-        html_content = html_header()
-        html_content += self.page_to_html()
-        html_content += html_footer()
-        # temporary QWebView
-        printer_web_view = QtWebKit.QWebView()
-        printer_web_view.setHtml(html_content)
-        printer_web_view.adjustSize()
-        printer_web_view.print_(printer)
-
+        self.print_(printer)
         url = QtCore.QUrl.fromLocalFile(report_path)
         # noinspection PyTypeChecker,PyCallByClass,PyArgumentList
         QtGui.QDesktopServices.openUrl(url)

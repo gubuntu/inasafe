@@ -4,9 +4,7 @@
 
 
 from osgeo import gdal, osr, ogr
-
 from qgis.core import (
-    QgsRasterLayer,
     QgsVectorLayer,
     QgsFeatureRequest,
 )
@@ -46,7 +44,7 @@ def polygonize(layer, callback=None):
     .. versionadded:: 4.0
     """
     output_layer_name = polygonize_steps['output_layer_name']
-    processing_step = polygonize_steps['step_name']
+    processing_step = polygonize_steps['step_name']  # NOQA
     output_layer_name = output_layer_name % layer.keywords['layer_purpose']
     gdal_layer_name = polygonize_steps['gdal_layer_name']
 
@@ -74,7 +72,8 @@ def polygonize(layer, callback=None):
     fd = ogr.FieldDefn(field_name, ogr.OFTInteger)
     output_layer.CreateField(fd)
 
-    input_band = input_raster.GetRasterBand(1)
+    active_band = layer.keywords.get('active_band', 1)
+    input_band = input_raster.GetRasterBand(active_band)
     # Fixme : add our own callback to Polygonize
     gdal.Polygonize(input_band, None, output_layer, 0, [], callback=None)
     destination.Destroy()

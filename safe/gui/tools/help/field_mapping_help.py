@@ -1,10 +1,11 @@
 # coding=utf-8
 """Help text for the Field Mapping dialog."""
 
-from safe.utilities.i18n import tr
 from safe import messaging as m
 from safe.messaging import styles
+from safe.utilities.i18n import tr
 from safe.utilities.resources import resources_path
+
 SUBSECTION_STYLE = styles.SUBSECTION_LEVEL_3_STYLE
 INFO_STYLE = styles.BLUE_LEVEL_4_STYLE
 SMALL_ICON_STYLE = styles.SMALL_ICON_STYLE
@@ -77,6 +78,20 @@ def content():
 
     )
     message.add(paragraph)
+    message.add(field_mapping_help_content())
+    return message
+
+
+def field_mapping_help_content():
+    """Helper method that returns just the content in extent mode.
+
+    This method was added so that the text could be reused in the
+    wizard.
+
+    :returns: A message object without brand element.
+    :rtype: safe.messaging.message.Message
+    """
+    message = m.Message()
     paragraph = m.Paragraph(tr(
         'Field mapping describes the process of matching one or more fields '
         'in an attribute table to a concept in InaSAFE. The field mappings '
@@ -135,7 +150,7 @@ def content():
         tr(
             'The vulnerable people group reports on specific demographics '
             'relating to vulnerability including things like the number of '
-            'infants, elderly people, disabled peopled and so on.'
+            'infants, elderly people, disabled people and so on.'
         )
     ))
     message.add(bullets)
@@ -187,7 +202,7 @@ def content():
     paragraph = m.Paragraph(
         tr(
             'The interplay between default ratios, aggregation layer '
-            'provided ratios and population exposure layers is illustrated'
+            'provided ratios and population exposure layers is illustrated '
             'in the table below.')
     )
     message.add(paragraph)

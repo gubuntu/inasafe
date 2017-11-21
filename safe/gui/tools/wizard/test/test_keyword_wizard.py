@@ -26,7 +26,9 @@ from safe.definitions.hazard import (
 from safe.definitions.exposure import (
     exposure_structure,
     exposure_population,
-    exposure_land_cover)
+    exposure_land_cover,
+    exposure_place,
+)
 from safe.definitions.hazard_category import hazard_category_multiple_event
 from safe.definitions.hazard_classifications import (
     flood_hazard_classes,
@@ -41,11 +43,11 @@ from safe.definitions.fields import (
     hazard_value_field,
     population_count_field,
     female_count_field,
-    elderly_count_field)
+)
 from safe.definitions.layer_geometry import (
-    layer_geometry_polygon, layer_geometry_raster)
+    layer_geometry_polygon, layer_geometry_raster, layer_geometry_point)
 from safe.definitions.exposure_classifications import (
-    generic_structure_classes)
+    generic_structure_classes, generic_place_classes)
 from safe.definitions.units import (
     count_exposure_unit, unit_metres, unit_mmi, unit_kilometres_per_hour)
 from safe.gui.tools.wizard.wizard_dialog import WizardDialog
@@ -70,7 +72,7 @@ layer_title = u'Layer Title'
 # noinspection PyTypeChecker
 class TestKeywordWizard(unittest.TestCase):
 
-    """Test the InaSAFE keyword wizard GUI"""
+    """Test the InaSAFE keyword wizard GUI."""
 
     maxDiff = None
 
@@ -150,8 +152,8 @@ class TestKeywordWizard(unittest.TestCase):
             else:
                 available_options.append(list_widget.item(i).text())
         message = (
-            'There is no %s in the list widget. The available options are %'
-            's' % (option, available_options))
+            'There is no %s in the list widget. The available options are '
+            '%s' % (option, available_options))
 
         raise Exception(message)
 
@@ -554,6 +556,10 @@ class TestKeywordWizard(unittest.TestCase):
                         u'classes': default_classes
                     }
                 }
+            },
+            'extra_keywords': {
+                'depth': 10,
+                'magnitude': 7.8
             }
         }
 
@@ -561,7 +567,7 @@ class TestKeywordWizard(unittest.TestCase):
 
         # noinspection PyTypeChecker
         dialog = WizardDialog(iface=IFACE)
-        dialog.set_keywords_creation_mode(layer)
+        dialog.set_keywords_creation_mode(layer, keywords)
 
         # Check if in select purpose step
         self.check_current_step(dialog.step_kw_purpose)
@@ -680,6 +686,8 @@ class TestKeywordWizard(unittest.TestCase):
 
         self.assertDictEqual(
             keywords['value_maps'], dialog.get_keywords()['value_maps'])
+
+        self.assertDictEqual(keywords, dialog.get_keywords())
 
     def test_exposure_structure_polygon_keyword(self):
         """Test keyword wizard for exposure structure polygon."""
@@ -974,7 +982,7 @@ class TestKeywordWizard(unittest.TestCase):
             layer.keywords['value_map'], dialog.get_keywords()['value_map'])
 
     def test_aggregation_keyword(self):
-        """Test Aggregation Keywords"""
+        """Test Aggregation Keywords."""
         layer = load_test_vector_layer(
             'gisv4', 'aggregation', 'small_grid.geojson', clone_to_memory=True)
         layer.keywords = {}
@@ -1131,7 +1139,7 @@ class TestKeywordWizard(unittest.TestCase):
         self.assertDictEqual(real_keywords, expected_keyword)
 
     def test_exposure_population_polygon_keyword(self):
-        """Test exposure population polygon keyword"""
+        """Test exposure population polygon keyword."""
         layer = load_test_vector_layer(
             'exposure', 'census.geojson', clone_to_memory=True)
         layer.keywords = {}
@@ -1390,6 +1398,96 @@ class TestKeywordWizard(unittest.TestCase):
 
         self.assertDictEqual(real_keywords, expected_keyword)
 
+    def test_exposure_population_raster(self):
+        """Test keyword wizard for population raster."""
+        path = standard_data_path(
+            'exposure', 'people_allow_resampling_true.tif')
+        message = "Path %s is not found" % path
+        self.assertTrue(os.path.exists(path), message)
+        layer = clone_raster_layer(
+            name='people_allow_resampling_true',
+            extension='.tif',
+            include_keywords=False,
+            source_directory=standard_data_path('exposure'))
+        self.assertIsNotNone(layer)
+        layer.keywords = {}
+
+        # noinspection PyTypeChecker
+        dialog = WizardDialog(iface=IFACE)
+        dialog.set_keywords_creation_mode(layer)
+
+        # Check if in select purpose step
+        self.check_current_step(dialog.step_kw_purpose)
+
+        # Select exposure
+        self.select_from_list_widget(
+            layer_purpose_exposure['name'],
+            dialog.step_kw_purpose.lstCategories)
+
+        # Click next to select exposure
+        dialog.pbnNext.click()
+
+        # Check if in select exposure step
+        self.check_current_step(dialog.step_kw_subcategory)
+
+        # select population
+        self.select_from_list_widget(
+            exposure_population['name'],
+            dialog.step_kw_subcategory.lstSubcategories)
+
+        # Click next to select population
+        dialog.pbnNext.click()
+
+        # Check if in select band step
+        self.check_current_step(dialog.step_kw_band_selector)
+
+        # Click next to select Band 1 (default)
+        dialog.pbnNext.click()
+
+        # Check if in select layer mode step
+        self.check_current_step(dialog.step_kw_layermode)
+
+        # Check if continuous is selected
+        self.check_current_text(
+            layer_mode_continuous['name'],
+            dialog.step_kw_layermode.lstLayerModes)
+
+        # Click next to select continuous
+        dialog.pbnNext.click()
+
+        # Check if in select unit step
+        self.check_current_step(dialog.step_kw_unit)
+
+        # Check if count is selected
+        self.check_current_text(
+            count_exposure_unit['name'],
+            dialog.step_kw_unit.lstUnits)
+
+        # Click next to select count
+        dialog.pbnNext.click()
+
+        # Check if in source step
+        self.check_current_step(dialog.step_kw_source)
+
+        # Click next to finish source step and go to title step
+        dialog.pbnNext.click()
+
+        # Check if in title step
+        self.check_current_step(dialog.step_kw_title)
+
+        # Click next to finish title step and go to kw summary step
+        dialog.pbnNext.click()
+
+        # Check if in title step
+        self.check_current_step(dialog.step_kw_summary)
+
+        # Click finish
+        dialog.pbnNext.click()
+
+        real_keywords = dialog.get_keywords()
+
+        self.assertEqual(1, real_keywords['active_band'])
+
     def test_clean_keyword_wizard(self):
         """Test for having the clean state when we run keyword wizard."""
         layer = load_test_vector_layer(
@@ -1636,16 +1734,16 @@ class TestKeywordWizard(unittest.TestCase):
         # Click next to select count
         dialog.pbnNext.click()
 
-        # Check if in select unit step
+        # Check if in select field step
         self.check_current_step(dialog.step_kw_field)
 
-        # Check if population is selected
+        # Check if population field is selected
         population_field = expected_keyword['inasafe_fields'][
             population_count_field['key']]
         self.check_current_text(
             population_field, dialog.step_kw_field.lstFields)
 
-        # Click next to select population
+        # Click next to select population field
         dialog.pbnNext.click()
 
         # Check field mapping steps
@@ -1673,6 +1771,149 @@ class TestKeywordWizard(unittest.TestCase):
             dialog.step_kw_source.dtSource_date.dateTime(), source_date)
         self.assertEqual(
             dialog.step_kw_source.leSource_license.text(), source_license)
+
+        # Click next to finish source step and go to title step
+        dialog.pbnNext.click()
+
+        # Check if in title step
+        self.check_current_step(dialog.step_kw_title)
+
+        self.assertEqual(dialog.step_kw_title.leTitle.text(), layer_title)
+
+        # Click next to finish title step and go to kw summary step
+        dialog.pbnNext.click()
+
+        # Check if in title step
+        self.check_current_step(dialog.step_kw_summary)
+
+        # Click finish
+        dialog.pbnNext.click()
+
+        # Checking Keyword Created
+        real_keywords = dialog.get_keywords()
+
+        self.assertDictEqual(byteify(real_keywords), byteify(expected_keyword))
+
+    def test_exposure_place_population(self):
+        """Test for place with population exposure."""
+        layer = load_test_vector_layer(
+            'gisv4',
+            'exposure',
+            'places.geojson',
+            clone_to_memory=True)
+        self.assertIsNotNone(layer)
+
+        expected_keyword = {
+            'scale': source_scale,
+            'license': source_license,
+            'source': source,
+            'url': source_url,
+            'title': layer_title,
+            'exposure': exposure_place['key'],
+            'inasafe_fields':
+                {
+                    exposure_type_field['key']: 'Type',
+                    population_count_field['key']: 'Population',
+                },
+            'date': source_date,
+            'layer_geometry': layer_geometry_point['key'],
+            'layer_purpose': layer_purpose_exposure['key'],
+            'layer_mode': layer_mode_classified['key'],
+            'classification': generic_place_classes['key'],
+        }
+
+        # noinspection PyTypeChecker
+        dialog = WizardDialog(iface=IFACE)
+        dialog.set_keywords_creation_mode(layer, expected_keyword)
+
+        # Check if in select purpose step
+        self.check_current_step(dialog.step_kw_purpose)
+
+        # Check if exposure is selected
+        self.select_from_list_widget(
+            layer_purpose_exposure['name'],
+            dialog.step_kw_purpose.lstCategories)
+
+        # Click next to select exposure
+        dialog.pbnNext.click()
+
+        # Check if in select exposure step
+        self.check_current_step(dialog.step_kw_subcategory)
+
+        # Check if place is selected
+        self.check_current_text(
+            exposure_place['name'],
+            dialog.step_kw_subcategory.lstSubcategories)
+
+        # Click next to select place
+        dialog.pbnNext.click()
+
+        # Check if in select layer mode step
+        self.check_current_step(dialog.step_kw_layermode)
+
+        # Check if classified is selected
+        self.check_current_text(
+            layer_mode_classified['name'],
+            dialog.step_kw_layermode.lstLayerModes)
+
+        # Click next to select classified
+        dialog.pbnNext.click()
+
+        # Check if in select field step
+        self.check_current_step(dialog.step_kw_field)
+
+        # Check if place type field is selected
+        place_type_field = expected_keyword['inasafe_fields'][
+            exposure_type_field['key']]
+        self.check_current_text(
+            place_type_field, dialog.step_kw_field.lstFields)
+
+        # Click next to select place type field
+        dialog.pbnNext.click()
+
+        # Check if in select classification step
+        self.check_current_step(dialog.step_kw_classification)
+
+        # Check if generic structure classes is selected.
+        self.check_current_text(
+            generic_place_classes['name'],
+            dialog.step_kw_classification.lstClassifications)
+
+        # Click next to select the classifications
+        dialog.pbnNext.click()
+
+        # Check if in classify step
+        self.check_current_step(dialog.step_kw_classify)
+
+        # Click next to finish value mapping
+        dialog.pbnNext.click()
+
+        # select additional keywords / inasafe fields step
+        self.check_current_step(dialog.step_kw_inasafe_fields)
+
+        current_inasafe_field = dialog.step_kw_inasafe_fields.\
+            get_inasafe_fields()
+
+        population_field = current_inasafe_field.get(
+            population_count_field['key'])
+
+        expected_population_field = expected_keyword['inasafe_fields'][
+            population_count_field['key']]
+
+        # Check if the population field is set.
+        self.assertEqual(population_field, expected_population_field)
+
+        # Click next to finish set the InaSAFE fields
+        dialog.pbnNext.click()
+
+        # Check field mapping steps
+        self.check_current_step(dialog.step_kw_fields_mapping)
+
+        # Click next to continue
+        dialog.pbnNext.click()
+
+        # Check if in source step
+        self.check_current_step(dialog.step_kw_source)
 
         # Click next to finish source step and go to title step
         dialog.pbnNext.click()
@@ -1745,6 +1986,12 @@ class TestKeywordWizard(unittest.TestCase):
         # Click next to select multiple event
         dialog.pbnNext.click()
 
+        # Check if in select band step
+        self.check_current_step(dialog.step_kw_band_selector)
+
+        # Click next to select Band 1 (default)
+        dialog.pbnNext.click()
+
         # Check if in select layer mode step
         self.check_current_step(dialog.step_kw_layermode)
 
@@ -1798,6 +2045,7 @@ class TestKeywordWizard(unittest.TestCase):
 
         # Checking Keyword Created
         expected_keyword = {
+            'active_band': 1,
             'scale': source_scale,
             'hazard_category': hazard_category_multiple_event['key'],
             'license': source_license,
@@ -1832,6 +2080,7 @@ class TestKeywordWizard(unittest.TestCase):
         self.assertIsNotNone(layer)
 
         expected_keyword = {
+            'active_band': 1,
             'scale': source_scale,
             'hazard_category': hazard_category_multiple_event['key'],
             'license': source_license,
@@ -1880,6 +2129,12 @@ class TestKeywordWizard(unittest.TestCase):
             dialog.step_kw_hazard_category.lstHazardCategories)
 
         # Click next to select multiple event
+        dialog.pbnNext.click()
+
+        # Check if in select band step
+        self.check_current_step(dialog.step_kw_band_selector)
+
+        # Click next to select Band 1 (default)
         dialog.pbnNext.click()
 
         # Check if in select layer mode step
@@ -1990,6 +2245,12 @@ class TestKeywordWizard(unittest.TestCase):
         # Click next to select multiple event
         dialog.pbnNext.click()
 
+        # Check if in select band step
+        self.check_current_step(dialog.step_kw_band_selector)
+
+        # Click next to select Band 1 (default)
+        dialog.pbnNext.click()
+
         # Check if in select layer mode step
         self.check_current_step(dialog.step_kw_layermode)
 
@@ -2054,6 +2315,7 @@ class TestKeywordWizard(unittest.TestCase):
 
         # Checking Keyword Created
         expected_keyword = {
+            'active_band': 1,
             'continuous_hazard_unit': 'metres',
             'date': source_date,
             'hazard': hazard_flood['key'],
@@ -2094,6 +2356,7 @@ class TestKeywordWizard(unittest.TestCase):
             source_directory=standard_data_path('hazard'))
         self.assertIsNotNone(layer)
         original_keywords = {
+            'active_band': 1,
             'continuous_hazard_unit': 'metres',
             'date': source_date,
             'hazard': hazard_flood['key'],
@@ -2152,6 +2415,12 @@ class TestKeywordWizard(unittest.TestCase):
             dialog.step_kw_hazard_category.lstHazardCategories)
 
         # Click next to select multiple event
+        dialog.pbnNext.click()
+
+        # Check if in select band step
+        self.check_current_step(dialog.step_kw_band_selector)
+
+        # Click next to select Band 1 (default)
         dialog.pbnNext.click()
 
         # Check if in select layer mode step
@@ -2363,141 +2632,8 @@ class TestKeywordWizard(unittest.TestCase):
 
         self.assertDictEqual(real_keywords, expected_keyword)
 
-    def test_allow_resample(self):
-        """Test allow resample step."""
-        path = standard_data_path(
-            'exposure', 'people_allow_resampling_false.tif')
-        message = "Path %s is not found" % path
-        self.assertTrue(os.path.exists(path), message)
-        layer = clone_raster_layer(
-            name='people_allow_resampling_false',
-            extension='.tif',
-            include_keywords=False,
-            source_directory=standard_data_path('exposure'))
-        self.assertIsNotNone(layer)
-        layer.keywords = {}
-
-        # noinspection PyTypeChecker
-        dialog = WizardDialog(iface=IFACE)
-        dialog.set_keywords_creation_mode(layer)
-
-        # Check if in select purpose step
-        self.check_current_step(dialog.step_kw_purpose)
-
-        # Select exposure
-        self.select_from_list_widget(
-            layer_purpose_exposure['name'],
-            dialog.step_kw_purpose.lstCategories)
-
-        # Click next to select exposure
-        dialog.pbnNext.click()
-
-        # Check if in select hazard step
-        self.check_current_step(dialog.step_kw_subcategory)
-
-        # select population
-        self.select_from_list_widget(
-            exposure_population['name'],
-            dialog.step_kw_subcategory.lstSubcategories)
-
-        # Click next to select population
-        dialog.pbnNext.click()
-
-        # Check if in select layer mode step
-        self.check_current_step(dialog.step_kw_layermode)
-
-        # select continuous mode
-        self.select_from_list_widget(
-            layer_mode_continuous['name'],
-            dialog.step_kw_layermode.lstLayerModes)
-
-        # Click next to select continuous
-        dialog.pbnNext.click()
-
-        # Check if in select unit step
-        self.check_current_step(dialog.step_kw_unit)
-
-        # select unit count
-        self.select_from_list_widget(
-            count_exposure_unit['name'],
-            dialog.step_kw_unit.lstUnits)
-
-        # Click next to select unit count
-        dialog.pbnNext.click()
-
-        # Check if in allow resample
-        self.check_current_step(dialog.step_kw_resample)
-
-        # Check Allow Resample
-        dialog.step_kw_resample.chkAllowResample.setChecked(True)
-
-        # Notes(IS): Skipped assigning raster inasafe default value for now.
-        # # Click next to InaSAFE Raster Default Values step
-        # dialog.pbnNext.click()
-        #
-        # # Check if in InaSAFE Raster Default Values step
-        # self.check_current_step(dialog.step_kw_inasafe_raster_default_values)
-
-        # parameter_widget = dialog.step_kw_inasafe_raster_default_values\
-        #     .parameter_container.get_parameter_widget_by_guid(
-        #         female_ratio_field['key'])
-        # new_default_female_ratio = 0.3
-        # parameter_widget.set_value(new_default_female_ratio)
-
-        # Click next to source step
-        dialog.pbnNext.click()
-
-        # Check if in source step
-        self.check_current_step(dialog.step_kw_source)
-
-        dialog.step_kw_source.leSource.setText(source)
-        dialog.step_kw_source.leSource_scale.setText(source_scale)
-        dialog.step_kw_source.leSource_url.setText(source_url)
-        dialog.step_kw_source.ckbSource_date.setChecked(True)
-        dialog.step_kw_source.dtSource_date.setDateTime(source_date)
-        dialog.step_kw_source.leSource_license.setText(source_license)
-
-        # Click next to finish source step and go to title step
-        dialog.pbnNext.click()
-
-        # Check if in title step
-        self.check_current_step(dialog.step_kw_title)
-
-        dialog.step_kw_title.leTitle.setText(layer_title)
-
-        # Click next to finish title step and go to kw summary step
-        dialog.pbnNext.click()
-
-        # Check if in title step
-        self.check_current_step(dialog.step_kw_summary)
-
-        # Click finish
-        dialog.pbnNext.click()
-
-        # Checking Keyword Created
-        expected_keyword = {
-            'allow_resampling': 'false',
-            'date': source_date,
-            'exposure': exposure_population['key'],
-            'exposure_unit': count_exposure_unit['key'],
-            'layer_geometry': layer_geometry_raster['key'],
-            'layer_mode': layer_mode_continuous['key'],
-            'layer_purpose': layer_purpose_exposure['key'],
-            # Notes(IS): Skipped assigning raster inasafe default value for
-            # now.
-            # 'inasafe_default_values': {
-            #       female_ratio_field['key']: new_default_female_ratio
-            # },
-            'license': source_license,
-            'scale': source_scale,
-            'source': source,
-            'title': layer_title,
-            'url': source_url,
-        }
-
-        real_keywords = dialog.get_keywords()
-        self.assertDictEqual(real_keywords, expected_keyword)
-
+    # @unittest.skip(
+    #     'This test is hanging for a unknown reason since a few times.')
     def test_auto_select_one_item(self):
         """Test auto select if there is only one item in a list."""
         layer = clone_shp_layer(
@@ -2511,6 +2647,7 @@ class TestKeywordWizard(unittest.TestCase):
         self.assertEquals(
             dialog.step_kw_subcategory.lstSubcategories.currentRow(), 2)
         num_item = dialog.step_kw_subcategory.lstSubcategories.count()
+        dialog.close()
         self.assertTrue(num_item == 3)
 
     def test_earthquake_raster(self):
@@ -2560,6 +2697,12 @@ class TestKeywordWizard(unittest.TestCase):
             dialog.step_kw_hazard_category.lstHazardCategories)
 
         # Click next to select multiple event
+        dialog.pbnNext.click()
+
+        # Check if in select band step
+        self.check_current_step(dialog.step_kw_band_selector)
+
+        # Click next to select Band 1 (default)
         dialog.pbnNext.click()
 
         # Check if in select layer mode step
@@ -2619,6 +2762,7 @@ class TestKeywordWizard(unittest.TestCase):
 
         # Checking Keyword Created
         expected_keyword = {
+            'active_band': 1,
             'continuous_hazard_unit': unit_mmi['key'],
             'scale': source_scale,
             'hazard_category': hazard_category_multiple_event['key'],
@@ -2724,6 +2868,12 @@ class TestKeywordWizard(unittest.TestCase):
             dialog.step_kw_hazard_category.lstHazardCategories)
 
         # Click next to select multiple event
+        dialog.pbnNext.click()
+
+        # Check if in select band step
+        self.check_current_step(dialog.step_kw_band_selector)
+
+        # Click next to select Band 1 (default)
         dialog.pbnNext.click()
 
         # Check if in select layer mode step
@@ -2838,6 +2988,12 @@ class TestKeywordWizard(unittest.TestCase):
         # Click next to select multiple event
         dialog.pbnNext.click()
 
+        # Check if in select band step
+        self.check_current_step(dialog.step_kw_band_selector)
+
+        # Click next to select Band 1 (default)
+        dialog.pbnNext.click()
+
         # Check if in select layer mode step
         self.check_current_step(dialog.step_kw_layermode)
 
@@ -2902,6 +3058,7 @@ class TestKeywordWizard(unittest.TestCase):
 
         # Checking Keyword Created
         expected_keyword = {
+            'active_band': 1,
             'continuous_hazard_unit': unit_kilometres_per_hour['key'],
             'scale': source_scale,
             'hazard_category': hazard_category_multiple_event['key'],
@@ -2915,7 +3072,7 @@ class TestKeywordWizard(unittest.TestCase):
             'layer_purpose': layer_purpose_hazard['key'],
             'layer_mode': layer_mode_continuous['key'],
             'thresholds': {
-                exposure_structure['key']: {
+                exposure_land_cover['key']: {
                     cyclone_au_bom_hazard_classes['key']: {
                         'active': True,
                         'classes': default_classification_thresholds(
@@ -2988,6 +3145,12 @@ class TestKeywordWizard(unittest.TestCase):
         # Click next to select multiple event
         dialog.pbnNext.click()
 
+        # Check if in select band step
+        self.check_current_step(dialog.step_kw_band_selector)
+
+        # Click next to select Band 1 (default)
+        dialog.pbnNext.click()
+
         # Check if in select layer mode step
         self.check_current_step(dialog.step_kw_layermode)
 
@@ -3045,6 +3208,7 @@ class TestKeywordWizard(unittest.TestCase):
 
         # Checking Keyword Created
         expected_keyword = {
+            'active_band': 1,
             'continuous_hazard_unit': unit_mmi['key'],
             'scale': source_scale,
             'hazard_category': hazard_category_multiple_event['key'],
@@ -3082,11 +3246,11 @@ class TestKeywordWizard(unittest.TestCase):
         for parameter_widget in parameter_container:
             parameter_widget = parameter_widget.widget()
 
-            # Locate the 'Do not use' radio button.
+            # Locate the 'Do not report' radio button.
             dont_use_button = (
                 parameter_widget.default_input_button_group.button(
                     len(parameter_widget._parameter.default_values) - 2))
-            # 'Do not use' button should be selected since the default
+            # 'Do not report' button should be selected since the default
             # selected input is 'No Field'.
             self.assertTrue(dont_use_button.isChecked())
             # Select ratio field on input.

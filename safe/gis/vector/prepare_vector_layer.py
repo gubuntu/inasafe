@@ -3,9 +3,9 @@
 """Prepare layers for InaSAFE."""
 
 import logging
-from PyQt4.QtCore import QPyNullVariant, QVariant
+
+from PyQt4.QtCore import QPyNullVariant
 from qgis.core import (
-    QgsVectorLayer,
     QgsField,
     QgsFeatureRequest,
     QGis,
@@ -15,15 +15,8 @@ from qgis.core import (
 
 from safe.common.exceptions import (
     InvalidKeywordsForProcessingAlgorithm, NoFeaturesInExtentError)
-from safe.gis.vector.tools import (
-    create_memory_layer,
-    remove_fields,
-    copy_fields,
-    copy_layer,
-    create_field_from_definition
-)
-from safe.gis.sanity_check import check_layer
-from safe.definitions.processing_steps import prepare_vector_steps
+from safe.definitions.exposure import indivisible_exposure
+from safe.definitions.exposure_classifications import data_driven_classes
 from safe.definitions.fields import (
     exposure_id_field,
     hazard_id_field,
@@ -33,23 +26,31 @@ from safe.definitions.fields import (
     count_fields,
     displaced_field
 )
-from safe.definitions.exposure import indivisible_exposure
 from safe.definitions.layer_purposes import (
     layer_purpose_exposure,
     layer_purpose_hazard,
     layer_purpose_aggregation
 )
+from safe.definitions.processing_steps import prepare_vector_steps
 from safe.definitions.utilities import (
     get_fields,
     definition,
     get_compulsory_fields,
 )
+from safe.gis.sanity_check import check_layer
+from safe.gis.vector.tools import (
+    create_memory_layer,
+    remove_fields,
+    copy_fields,
+    copy_layer,
+    create_field_from_definition
+)
 from safe.impact_function.postprocessors import run_single_post_processor
-from safe.definitions.post_processors import post_processor_size
+from safe.processors import post_processor_size
 from safe.utilities.i18n import tr
-from safe.utilities.profiling import profile
 from safe.utilities.metadata import (
-    active_thresholds_value_maps, active_classification)
+    active_thresholds_value_maps, active_classification, copy_layer_keywords)
+from safe.utilities.profiling import profile
 
 __copyright__ = "Copyright 2016, The InaSAFE Project"
 __license__ = "GPL version 3"
@@ -82,19 +83,17 @@ def prepare_vector_layer(layer, callback=None):
     """
     output_layer_name = prepare_vector_steps['output_layer_name']
     output_layer_name = output_layer_name % layer.keywords['layer_purpose']
-    processing_step = prepare_vector_steps['step_name']
+    processing_step = prepare_vector_steps['step_name']  # NOQA
 
     if not layer.keywords.get('inasafe_fields'):
         msg = 'inasafe_fields is missing in keywords from %s' % layer.name()
         raise InvalidKeywordsForProcessingAlgorithm(msg)
 
-    feature_count = layer.featureCount()
-
     cleaned = create_memory_layer(
         output_layer_name, layer.geometryType(), layer.crs(), layer.fields())
 
     # We transfer keywords to the output.
-    cleaned.keywords = layer.keywords
+    cleaned.keywords = copy_layer_keywords(layer.keywords)
 
     copy_layer(layer, cleaned)
     _remove_features(cleaned)
@@ -166,7 +165,10 @@ def _check_value_mapping(layer, exposure_key=None):
         classification = layer.keywords['classification']
 
     exposure_classification = definition(classification)
-    other = exposure_classification['classes'][-1]['key']
+
+    other = None
+    if exposure_classification['key'] != data_driven_classes['key']:
+        other = exposure_classification['classes'][-1]['key']
 
     exposure_mapped = []
     for group in value_map.itervalues():
@@ -195,6 +197,7 @@ def clean_inasafe_fields(layer):
     :param layer: The layer
     :type layer: QgsVectorLayer
     """
+    fields = []
     # Exposure
     if layer.keywords['layer_purpose'] == layer_purpose_exposure['key']:
         fields = get_fields(
@@ -227,7 +230,7 @@ def clean_inasafe_fields(layer):
         if key in expected_fields:
             if isinstance(val, basestring):
                 val = [val]
-            sum_fields(layer, expected_fields[key], val)
+            sum_fields(layer, key, val)
             new_keywords[key] = expected_fields[key]
 
     # Houra, InaSAFE keywords match our concepts !
@@ -247,13 +250,12 @@ def clean_inasafe_fields(layer):
 def _size_is_needed(layer):
     """Checker if we need the size field.
 
-     :param layer: The layer to test.
-     :type layer: QgsVectorLayer
+    :param layer: The layer to test.
+    :type layer: QgsVectorLayer
 
-     :return: If we need the size field.
-     :rtype: bool
+    :return: If we need the size field.
+    :rtype: bool
     """
-
     exposure = layer.keywords.get('exposure')
     if not exposure:
         # The layer is not an exposure.
@@ -380,7 +382,7 @@ def _add_id_column(layer):
     for layer_type, field in mapping.iteritems():
         if layer_purpose == layer_type:
             safe_id = field
-            if layer.keywords.get(field['key']):
+            if layer.keywords['inasafe_fields'].get(field['key']):
                 has_id_column = True
             break
 
@@ -442,46 +444,55 @@ def _add_default_exposure_class(layer):
 
 
 @profile
-def sum_fields(layer, output_field_name, input_fields):
+def sum_fields(layer, output_field_key, input_fields):
     """Sum the value of input_fields and put it as output_field.
 
     :param layer: The vector layer.
     :type layer: QgsVectorLayer
 
-    :param output_field_name: The output field name.
-    :type output_field_name: str
+    :param output_field_key: The output field definition key.
+    :type output_field_key: basestring
 
     :param input_fields: List of input fields' name.
     :type input_fields: list
     """
+    field_definition = definition(output_field_key)
+    output_field_name = field_definition['field_name']
     # If the fields only has one element
     if len(input_fields) == 1:
         # Name is different, copy it
         if input_fields[0] != output_field_name:
-            copy_fields(layer, {input_fields[0]: output_field_name})
+            copy_fields(layer, {
+                input_fields[0]: output_field_name})
         # Name is same, do nothing
         else:
             return
     else:
         # Creating expression
+        # Put field name in a double quote. See #4248
+        input_fields = ['"%s"' % f for f in input_fields]
         string_expression = ' + '.join(input_fields)
         sum_expression = QgsExpression(string_expression)
-        sum_expression.prepare(layer.pendingFields())
+        context = QgsExpressionContext()
+        context.setFields(layer.pendingFields())
+        sum_expression.prepare(context)
 
         # Get the output field index
         output_idx = layer.fieldNameIndex(output_field_name)
         # Output index is not found
         if output_idx == -1:
-            output_field = QgsField(output_field_name, QVariant.Double)
+            output_field = create_field_from_definition(field_definition)
             layer.startEditing()
-            layer.dataProvider().addAttributes([output_field])
+            layer.addAttribute(output_field)
             layer.commitChanges()
             output_idx = layer.fieldNameIndex(output_field_name)
 
         layer.startEditing()
         # Iterate to all features
         for feature in layer.getFeatures():
-            feature[output_idx] = sum_expression.evaluate(feature)
+            context.setFeature(feature)
+            result = sum_expression.evaluate(context)
+            feature[output_idx] = result
             layer.updateFeature(feature)
 
         layer.commitChanges()

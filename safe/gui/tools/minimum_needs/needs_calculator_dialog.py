@@ -1,33 +1,23 @@
 # coding=utf-8
-"""**Minimum Needs Implementation.**
+"""Minimum Needs Implementation.
 
 .. tip:: Provides minimum needs assessment for a polygon layer containing
     counts of people affected per polygon.
-
 """
-
-__author__ = 'tim@kartoza.com, ole.moller.nielsen@gmail.com'
-__revision__ = '$Format:%H$'
-__date__ = '20/1/2013'
-__license__ = "GPL"
-__copyright__ = 'Copyright 2013, Australia Indonesia Facility for '
-__copyright__ += 'Disaster Reduction'
 
 import logging
 import os
 
+from PyQt4 import QtGui
+from PyQt4.QtCore import pyqtSignature, pyqtSlot, QSettings
 from qgis.core import QgsMapLayerRegistry
 from qgis.gui import QgsMapLayerProxyModel, QgsFieldProxyModel
 
-from PyQt4 import QtGui
-from PyQt4.QtCore import pyqtSignature, pyqtSlot, QSettings
-
-from safe.common.utilities import temp_dir
+from safe.common.utilities import temp_dir, unique_filename
 from safe.common.version import get_version
 from safe.datastore.folder import Folder
 from safe.definitions.fields import displaced_field, aggregation_name_field
 from safe.definitions.layer_purposes import layer_purpose_aggregation
-from safe.definitions import minimum_needs_post_processors
 from safe.gis.vector.prepare_vector_layer import (
     clean_inasafe_fields)
 from safe.gis.vector.tools import (
@@ -35,9 +25,16 @@ from safe.gis.vector.tools import (
 from safe.gui.tools.help.needs_calculator_help import needs_calculator_help
 from safe.impact_function.postprocessors import run_single_post_processor
 from safe.messaging import styles
+from safe.processors.minimum_needs_post_processors import (
+    minimum_needs_post_processors)
 from safe.utilities.qgis_utilities import display_critical_message_box
 from safe.utilities.resources import html_footer, html_header, get_ui_class
 from safe.utilities.utilities import humanise_exception
+
+__copyright__ = "Copyright 2016, The InaSAFE Project"
+__license__ = "GPL version 3"
+__email__ = "info@inasafe.org"
+__revision__ = '$Format:%H$'
 
 INFO_STYLE = styles.BLUE_LEVEL_4_STYLE
 LOGGER = logging.getLogger('InaSAFE')
@@ -149,10 +146,11 @@ class NeedsCalculatorDialog(QtGui.QDialog, FORM_CLASS):
         """
         # create memory layer
         output_layer_name = os.path.splitext(input_layer.name())[0]
-        output_layer = (
-            '%s_minimum_needs' % output_layer_name)
+        output_layer_name = unique_filename(
+            prefix=('%s_minimum_needs_' % output_layer_name),
+            dir='minimum_needs_calculator')
         output_layer = create_memory_layer(
-            output_layer,
+            output_layer_name,
             input_layer.geometryType(),
             input_layer.crs(),
             input_layer.fields())
@@ -214,18 +212,26 @@ class NeedsCalculatorDialog(QtGui.QDialog, FORM_CLASS):
             'inasafe/defaultUserDirectory', defaultValue='')
 
         if default_user_directory:
-            path = os.path.join(
-                default_user_directory, self.result_layer.name())
-            if not os.path.exists(path):
-                os.makedirs(path)
-            data_store = Folder(path)
+            output_directory = os.path.join(
+                default_user_directory, 'minimum_needs_calculator')
+            if not os.path.exists(output_directory):
+                os.makedirs(output_directory)
         else:
-            data_store = Folder(temp_dir(sub_dir=self.result_layer.name()))
+            output_directory = temp_dir(sub_dir='minimum_needs_calculator')
 
+        output_layer_name = os.path.split(self.result_layer.name())[1]
+
+        # If normal filename doesn't exist, then use normal filename
+        random_string_length = len(output_layer_name.split('_')[-1])
+        normal_filename = output_layer_name[:-(random_string_length + 1)]
+        if not os.path.exists(os.path.join(output_directory, normal_filename)):
+            output_layer_name = normal_filename
+
+        data_store = Folder(output_directory)
         data_store.default_vector_format = 'geojson'
-        data_store.add_layer(self.result_layer, self.result_layer.name())
+        data_store.add_layer(self.result_layer, output_layer_name)
 
-        self.result_layer = data_store.layer(self.result_layer.name())
+        self.result_layer = data_store.layer(output_layer_name)
 
         # noinspection PyArgumentList
         QgsMapLayerRegistry.instance().addMapLayers(

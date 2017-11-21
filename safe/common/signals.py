@@ -24,14 +24,13 @@ __copyright__ = ('Copyright 2012, Australia Indonesia Facility for '
 
 import logging
 
-from safe_extras.pydispatch import dispatcher
+from pydispatch import dispatcher
+
 from safe.utilities.utilities import get_error_message
 
 DYNAMIC_MESSAGE_SIGNAL = 'DynamicMessage'
 STATIC_MESSAGE_SIGNAL = 'StaticMessage'
 ERROR_MESSAGE_SIGNAL = 'ErrorMessage'
-BUSY_SIGNAL = 'BusySignal'
-NOT_BUSY_SIGNAL = 'NotBusySignal'
 
 LOGGER = logging.getLogger('InaSAFE')
 

@@ -3,11 +3,11 @@
 
 # This import is to enable SIP API V2
 # noinspection PyUnresolvedReferences
-import qgis  # pylint: disable=unused-import
+import qgis  # NOQA pylint: disable=unused-import
+from parameters.text_parameter import TextParameter
 
 from safe.utilities.i18n import tr
 from safe.utilities.resources import resources_path
-from safe_extras.parameters.text_parameter import TextParameter
 
 __copyright__ = "Copyright 2016, The InaSAFE Project"
 __license__ = "GPL version 3"

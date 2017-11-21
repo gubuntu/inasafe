@@ -11,7 +11,9 @@
   },
   "expected_steps":{
     "impact function":{
-      "info": {},
+      "info": {
+        "crs": "EPSG:4326"
+      },
       "process":[
         "Make aggregate hazard layer valid",
         "Intersect divisible features with the aggregate hazard",
@@ -20,6 +22,10 @@
         "Aggregate the aggregation summary",
         "Aggregate the analysis summary"
       ]
+    },
+    "pre_processor": {
+      "info": {},
+      "process": []
     },
     "post_processor":{
       "info": {},
@@ -44,7 +50,6 @@
         "Over 60 Years Old Post Processor",
         "Disability Vulnerability Post Processor",
         "Child Bearing Age Post Processor",
-        "Pregnant and Lactating Post Processor",
         "Pregnant Post Processor",
         "Lactating Women Post Processor",
         "Additional Weekly Rice kg for Pregnant and Lactating Women Post Processor"
@@ -62,7 +67,7 @@
     },
     "hazard":{
       "info": {
-        "use_same_projection":true
+        "use_same_projection_as_aggregation":true
       },
       "process":[
         "Clip and mask hazard polygons with the analysis layer",
@@ -72,7 +77,9 @@
       ]
     },
     "exposure":{
-      "info": {},
+      "info": {
+        "use_same_projection_as_aggregation":true
+      },
       "process":[
         "Smart clip",
         "Cleaning the vector exposure attribute table",

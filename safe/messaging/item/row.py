@@ -16,23 +16,26 @@ __date__ = '04/06/2013'
 __copyright__ = ('Copyright 2012, Australia Indonesia Facility for '
                  'Disaster Reduction')
 
-from message_element import MessageElement
 from exceptions import InvalidMessageItemError
+
 from cell import Cell
+from image import Image
+from message_element import MessageElement
+
 
 # FIXME (MB) remove when all to_* methods are implemented
 # pylint: disable=W0223
 
 
 class Row(MessageElement):
-    """A class to model table rows in the messaging system """
+    """A class to model table rows in the messaging system."""
 
     def __init__(self, *args, **kwargs):
         """Creates a row object
 
-        :param args: args can be list or Cell of values to prepopulate the
+        :param *args: args can be list or Cell of values to prepopulate the
             row cells with.
-        :type args: list, Cell
+        :type *args: list, Cell
 
         :param header: A flag to indicate if the cell should be treated as
             a header cell. Depending on the ouput format cells may be rendered
@@ -87,6 +90,8 @@ class Row(MessageElement):
             self.cells.append(Cell(item, header=header_flag, align=align))
         elif isinstance(item, Cell):
             self.cells.append(item)
+        elif isinstance(item, Image):
+            self.cells.append(Cell(item))
         elif isinstance(item, list):
             for i in item:
                 self.cells.append(Cell(i, header=header_flag, align=align))

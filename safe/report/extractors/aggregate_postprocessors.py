@@ -2,26 +2,31 @@
 """Module used to generate context for aggregation postprocessors sections.
 """
 
+from collections import OrderedDict
+
 # noinspection PyUnresolvedReferences
 from PyQt4.QtCore import QPyNullVariant
-from collections import OrderedDict
 
 from safe.common.parameters.resource_parameter import ResourceParameter
 from safe.definitions.exposure import exposure_population
-from safe.definitions.fields import (
-    aggregation_name_field,
-    displaced_field)
 from safe.definitions.field_groups import (
     age_displaced_count_group,
-    gender_displaced_count_group)
+    gender_displaced_count_group,
+    vulnerability_displaced_count_groups)
+from safe.definitions.fields import (
+    aggregation_name_field,
+    displaced_field,
+    additional_minimum_needs)
 from safe.definitions.minimum_needs import minimum_needs_fields
-from safe.definitions.post_processors.population_post_processors import (
+from safe.definitions.utilities import (
+    postprocessor_output_field,
+    definition)
+from safe.processors.population_post_processors import (
     age_postprocessors,
     gender_postprocessors)
-from safe.definitions.utilities import postprocessor_output_field
 from safe.report.extractors.util import (
     value_from_field_name,
-    resolve_from_dictionary, layer_definition_type)
+    resolve_from_dictionary)
 from safe.utilities.rounding import format_number
 
 __copyright__ = "Copyright 2016, The InaSAFE Project"
@@ -51,20 +56,21 @@ def aggregation_postprocessors_extractor(impact_report, component_metadata):
         'sections': OrderedDict()
     }
 
-    """Initializations"""
+    """Initializations."""
 
     extra_args = component_metadata.extra_args
     # Find out aggregation report type
-    exposure_layer = impact_report.exposure
     aggregation_summary = impact_report.aggregation_summary
     analysis_layer = impact_report.analysis
     analysis_layer_fields = impact_report.analysis.keywords['inasafe_fields']
     debug_mode = impact_report.impact_function.debug_mode
     use_aggregation = bool(impact_report.impact_function.provenance[
         'aggregation_layer'])
+    provenance = impact_report.impact_function.provenance
+    exposure_keywords = provenance['exposure_keywords']
 
     # Get exposure type definition
-    exposure_type = layer_definition_type(exposure_layer)
+    exposure_type = definition(exposure_keywords['exposure'])
 
     # this entire section is only for population exposure type
     if not exposure_type == exposure_population:
@@ -85,43 +91,26 @@ def aggregation_postprocessors_extractor(impact_report, component_metadata):
         zero_displaced = False
 
     context['use_aggregation'] = use_aggregation
-    if not use_aggregation:
-        context['header'] = resolve_from_dictionary(
-            extra_args, 'header')
+    context['header'] = resolve_from_dictionary(
+        extra_args, 'header')
 
+    group_header_format = resolve_from_dictionary(
+        extra_args, ['defaults', 'group_header_format'])
+
+    section_header_format = resolve_from_dictionary(
+        extra_args,
+        ['defaults', 'section_header_format'])
+    if not use_aggregation:
+        section_header_format = resolve_from_dictionary(
+            extra_args, ['defaults', 'section_header_format_no_aggregation'])
+
+    """Age Groups."""
     age_items = {
         'group': age_displaced_count_group,
-        'group_header': u'Age breakdown (in affected area)',
+        'group_header': group_header_format.format(
+            header_name=age_displaced_count_group['header_name']),
         'fields': [postprocessor_output_field(p) for p in age_postprocessors]
     }
-    gender_items = {
-        'group': gender_displaced_count_group,
-        'group_header': u'Gender breakdown (in affected area)',
-        'fields': [
-            postprocessor_output_field(p) for p in gender_postprocessors]
-    }
-    # TODO: Rohmat softcode the groups
-    # vulnerability_items = {
-    #    'group': vulnerability_displaced_count_group,
-    #    'group_header': u'Vulnerability breakdown (in affected area)',
-    #    'fields': [
-    #        postprocessor_output_field(p) for p in (
-    #            vulnerability_postprocessors)]
-    # }
-    # vulnerability_items = {
-    #    'group': vulnerability_displaced_count_group,
-    #    'group_header': u'Vulnerability breakdown (in affected area)',
-    #    'fields': [
-    #        postprocessor_output_field(p) for p in (
-    #            vulnerability_postprocessors)]
-    # }
-    # vulnerability_items = {
-    #    'group': vulnerability_displaced_count_group,
-    #    'group_header': u'Vulnerability breakdown (in affected area)',
-    #    'fields': [
-    #        postprocessor_output_field(p) for p in (
-    #            vulnerability_postprocessors)]
-    # }
 
     # check age_fields exists
     for field in age_items['fields']:
@@ -131,6 +120,48 @@ def aggregation_postprocessors_extractor(impact_report, component_metadata):
     else:
         no_age_field = True
 
+    context['sections']['age'] = []
+    age_section_header = section_header_format.format(
+        header_name=age_displaced_count_group['header_name'])
+    if zero_displaced:
+        context['sections']['age'].append(
+            {
+                'header': age_section_header,
+                'empty': True,
+                'message': resolve_from_dictionary(
+                    extra_args, ['defaults', 'zero_displaced_message'])
+            }
+        )
+    elif no_age_field:
+        context['sections']['age'].append(
+            {
+                'header': age_section_header,
+                'empty': True,
+                'message': resolve_from_dictionary(
+                    extra_args, ['defaults', 'no_age_rate_message'])
+            }
+        )
+    else:
+        context['sections']['age'].append(
+            create_section(
+                aggregation_summary,
+                analysis_layer,
+                age_items,
+                age_section_header,
+                use_aggregation=use_aggregation,
+                debug_mode=debug_mode,
+                extra_component_args=extra_args)
+        )
+
+    """Gender Groups."""
+    gender_items = {
+        'group': gender_displaced_count_group,
+        'group_header': group_header_format.format(
+            header_name=gender_displaced_count_group['header_name']),
+        'fields': [
+            postprocessor_output_field(p) for p in gender_postprocessors]
+    }
+
     # check gender_fields exists
     for field in gender_items['fields']:
         if field['key'] in analysis_layer_fields:
@@ -139,141 +170,147 @@ def aggregation_postprocessors_extractor(impact_report, component_metadata):
     else:
         no_gender_field = True
 
-    # check vulnerability_fields exists
-
-    # TODO: Rohmat softcode
-
-    # for field in vulnerability_items['fields']:
-    #    if field['key'] in analysis_layer_fields:
-    #        no_vulnerability_field = False
-    #        break
-    # else:
-    #    no_vulnerability_field = True
-
-    age_section_header = resolve_from_dictionary(
-        extra_args, ['sections', 'age', 'header'])
+    context['sections']['gender'] = []
+    gender_section_header = section_header_format.format(
+        header_name=gender_displaced_count_group['header_name'])
     if zero_displaced:
-        context['sections']['age'] = {
-            'header': age_section_header,
-            'empty': True,
-            'message': resolve_from_dictionary(
-                extra_args, ['defaults', 'zero_displaced_message'])
-        }
-    elif no_age_field:
-        context['sections']['age'] = {
-            'header': age_section_header,
-            'empty': True,
-            'message': resolve_from_dictionary(
-                extra_args, ['defaults', 'no_age_rate_message'])
-        }
-    else:
-        context['sections']['age'] = create_section(
-            aggregation_summary,
-            analysis_layer,
-            age_items,
-            age_section_header,
-            use_aggregation=use_aggregation,
-            debug_mode=debug_mode,
-            extra_component_args=extra_args)
-
-    gender_section_header = resolve_from_dictionary(
-        extra_args, ['sections', 'gender', 'header'])
-    if zero_displaced:
-        context['sections']['gender'] = {
-            'header': gender_section_header,
-            'empty': True,
-            'message': resolve_from_dictionary(
-                extra_args, ['defaults', 'zero_displaced_message'])
-        }
+        context['sections']['gender'].append(
+            {
+                'header': gender_section_header,
+                'empty': True,
+                'message': resolve_from_dictionary(
+                    extra_args, ['defaults', 'zero_displaced_message'])
+            }
+        )
     elif no_gender_field:
-        context['sections']['gender'] = {
-            'header': gender_section_header,
-            'empty': True,
-            'message': resolve_from_dictionary(
-                extra_args, ['defaults', 'no_gender_rate_message'])
-        }
+        context['sections']['gender'].append(
+            {
+                'header': gender_section_header,
+                'empty': True,
+                'message': resolve_from_dictionary(
+                    extra_args, ['defaults', 'no_gender_rate_message'])
+            }
+        )
     else:
-        context['sections']['gender'] = create_section(
-            aggregation_summary,
-            analysis_layer,
-            gender_items,
-            gender_section_header,
-            use_aggregation=use_aggregation,
-            debug_mode=debug_mode,
-            extra_component_args=extra_args)
+        context['sections']['gender'].append(
+            create_section(
+                aggregation_summary,
+                analysis_layer,
+                gender_items,
+                gender_section_header,
+                use_aggregation=use_aggregation,
+                debug_mode=debug_mode,
+                extra_component_args=extra_args)
+        )
 
-    vulnerability_section_header = resolve_from_dictionary(
-        extra_args, ['sections', 'vulnerability', 'header'])
-    if zero_displaced:
-        context['sections']['vulnerability'] = {
-            'header': vulnerability_section_header,
-            'empty': True,
-            'message': resolve_from_dictionary(
-                extra_args, ['defaults', 'zero_displaced_message'])
+    """Vulnerability Groups."""
+    context['sections']['vulnerability'] = []
+    for vulnerability_group in vulnerability_displaced_count_groups:
+        vulnerability_items = {
+            'group': vulnerability_group,
+            'group_header': group_header_format.format(
+                header_name=vulnerability_group['header_name']),
+            'fields': [field for field in vulnerability_group['fields']]
         }
-    # TODO: Rohmat soft code
-    # elif no_vulnerability_field:
-    #    context['sections']['vulnerability'] = {
-    #        'header': vulnerability_section_header,
-    #        'empty': True,
-    #        'message': resolve_from_dictionary(
-    #            extra_args, ['defaults', 'no_vulnerability_rate_message'])
-    #    }
-    # else:
-    #    context['sections']['vulnerability'] = create_section(
-    #        aggregation_summary,
-    #        analysis_layer,
-    #        vulnerability_items,
-    #        vulnerability_section_header,
-    #        use_aggregation=use_aggregation,
-    #        debug_mode=debug_mode,
-    #        extra_component_args=extra_args)
 
+        # check vulnerability_fields exists
+        for field in vulnerability_items['fields']:
+            if field['key'] in analysis_layer_fields:
+                no_vulnerability_field = False
+                break
+        else:
+            no_vulnerability_field = True
+
+        vulnerability_section_header = section_header_format.format(
+            header_name=vulnerability_group['header_name'])
+        if zero_displaced:
+            context['sections']['vulnerability'].append(
+                {
+                    'header': vulnerability_section_header,
+                    'empty': True,
+                    'message': resolve_from_dictionary(
+                        extra_args, ['defaults', 'zero_displaced_message'])
+                }
+            )
+        elif no_vulnerability_field:
+            context['sections']['vulnerability'].append(
+                {
+                    'header': vulnerability_section_header,
+                    'empty': True,
+                    'message': resolve_from_dictionary(
+                        extra_args,
+                        ['defaults', 'no_vulnerability_rate_message'])
+                }
+            )
+        else:
+            context['sections']['vulnerability'].append(
+                create_section(
+                    aggregation_summary,
+                    analysis_layer,
+                    vulnerability_items,
+                    vulnerability_section_header,
+                    use_aggregation=use_aggregation,
+                    debug_mode=debug_mode,
+                    extra_component_args=extra_args)
+            )
+
+    """Minimum Needs."""
+    context['sections']['minimum_needs'] = []
     minimum_needs_section_header = resolve_from_dictionary(
         extra_args, ['sections', 'minimum_needs', 'header'])
     # Don't show minimum needs if there is no displaced
     if zero_displaced:
-        context['sections']['minimum_needs'] = {
-            'header': minimum_needs_section_header,
-            'empty': True,
-            'message': resolve_from_dictionary(
-                extra_args, ['defaults', 'zero_displaced_message'])
-        }
+        context['sections']['minimum_needs'].append(
+            {
+                'header': minimum_needs_section_header,
+                'empty': True,
+                'message': resolve_from_dictionary(
+                    extra_args, ['defaults', 'zero_displaced_message'])
+            }
+        )
     # Only provides minimum needs breakdown if there is aggregation layer
     elif use_aggregation:
         # minimum needs should provide unit for column headers
         units_label = []
         minimum_needs_items = {
-            'group_header': u'Minimum needs breakdown (in affected area)',
-            'fields': minimum_needs_fields
+            'group_header': u'Minimum needs breakdown',
+            'fields': minimum_needs_fields + additional_minimum_needs
         }
 
         for field in minimum_needs_items['fields']:
-            need = field['need_parameter']
-            if isinstance(need, ResourceParameter):
-                unit = None
-                unit_abbreviation = need.unit.abbreviation
-                if unit_abbreviation:
-                    unit_format = '{unit}'
-                    unit = unit_format.format(
-                        unit=unit_abbreviation)
-                units_label.append(unit)
+            unit = None
+            if field.get('need_parameter'):
+                need = field['need_parameter']
+                if isinstance(need, ResourceParameter):
+                    unit_abbreviation = need.unit.abbreviation
+            elif field.get('unit'):
+                need_unit = field.get('unit')
+                unit_abbreviation = need_unit.get('abbreviation')
 
-        context['sections']['minimum_needs'] = create_section(
-            aggregation_summary,
-            analysis_layer,
-            minimum_needs_items,
-            minimum_needs_section_header,
-            units_label=units_label,
-            debug_mode=debug_mode,
-            extra_component_args=extra_args)
+            if unit_abbreviation:
+                unit_format = '{unit}'
+                unit = unit_format.format(
+                    unit=unit_abbreviation)
+            units_label.append(unit)
+
+        context['sections']['minimum_needs'].append(
+            create_section(
+                aggregation_summary,
+                analysis_layer,
+                minimum_needs_items,
+                minimum_needs_section_header,
+                units_label=units_label,
+                debug_mode=debug_mode,
+                extra_component_args=extra_args)
+        )
     else:
         sections_not_empty = True
-        for _, value in context['sections'].iteritems():
-            if value.get('rows'):
-                break
-        else:
-            sections_not_empty = False
+        for _, values in context['sections'].iteritems():
+            for value in values:
+                if value.get('rows'):
+                    break
+                else:
+                    sections_not_empty = False
 
         context['sections_not_empty'] = sections_not_empty
 
@@ -398,7 +435,7 @@ def create_section_with_aggregation(
     if displaced_field['key'] not in aggregation_summary_fields:
         return {}
 
-    """Generating header name for columns"""
+    """Generating header name for columns."""
 
     # First column header is aggregation title
     default_aggregation_header = resolve_from_dictionary(
@@ -414,7 +451,11 @@ def create_section_with_aggregation(
     group_fields_found = []
     start_group_header = True
     for idx, output_field in enumerate(postprocessors_fields_found):
-        name = output_field['name']
+
+        name = output_field.get('header_name')
+        if not name:
+            name = output_field.get('name')
+
         if units_label or output_field.get('unit'):
             unit = None
             if units_label:
@@ -455,7 +496,7 @@ def create_section_with_aggregation(
         start_group_header = False
         columns.append(header_dict)
 
-    """Generating values for rows"""
+    """Generating values for rows."""
 
     for feature in aggregation_summary.getFeatures():
 
@@ -499,7 +540,7 @@ def create_section_with_aggregation(
 
         row_values.append(row)
 
-    """Generating total rows """
+    """Generating total rows."""
 
     total_displaced_field_name = analysis_layer_fields[
         displaced_field['key']]
@@ -524,15 +565,16 @@ def create_section_with_aggregation(
             is_population=True)
         totals.append(value)
 
-    notes = resolve_from_dictionary(
+    default_notes = resolve_from_dictionary(
         extra_component_args, ['defaults', 'notes'])
 
-    if type(notes) is not list:
-        notes = [notes]
+    if type(default_notes) is not list:
+        default_notes = [default_notes]
 
     try:
-        notes += postprocessor_fields['group']['notes']
+        notes = default_notes + postprocessor_fields['group']['notes']
     except (TypeError, KeyError):
+        notes = default_notes
         pass
 
     return {
@@ -595,15 +637,13 @@ def create_section_without_aggregation(
 
     # figuring out displaced field
     try:
-        displaced_field_name = analysis_layer_fields[
-            displaced_field['key']]
-        displaced_field_name = aggregation_summary_fields[
-            displaced_field['key']]
+        analysis_layer_fields[displaced_field['key']]
+        aggregation_summary_fields[displaced_field['key']]
     except KeyError:
         # no displaced field, can't show result
         return {}
 
-    """Generating header name for columns"""
+    """Generating header name for columns."""
 
     # First column header is aggregation title
     total_population_header = resolve_from_dictionary(
@@ -613,11 +653,15 @@ def create_section_without_aggregation(
         total_population_header,
     ]
 
-    """Generating values for rows"""
+    """Generating values for rows."""
     row_values = []
 
     for idx, output_field in enumerate(postprocessors_fields_found):
-        name = output_field['name']
+
+        name = output_field.get('header_name')
+        if not name:
+            name = output_field.get('name')
+
         row = []
         if units_label or output_field.get('unit'):
             unit = None

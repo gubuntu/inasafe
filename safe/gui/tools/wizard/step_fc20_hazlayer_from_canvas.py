@@ -1,32 +1,18 @@
 # coding=utf-8
-"""
-InaSAFE Disaster risk assessment tool by AusAid -**InaSAFE Wizard**
-
-This module provides: Function Centric Wizard Step: Hazard Layer From Canvas
-
-Contact : ole.moller.nielsen@gmail.com
-
-.. note:: This program is free software; you can redistribute it and/or modify
-     it under the terms of the GNU General Public License as published by
-     the Free Software Foundation; either version 2 of the License, or
-     (at your option) any later version.
-
-"""
+"""InaSAFE Wizard Step Hazard Layer Canvas."""
 
 # noinspection PyPackageRequirements
-from PyQt4 import QtCore, QtGui
+from PyQt4.QtCore import pyqtSignature, Qt
 # noinspection PyPackageRequirements
-from PyQt4.QtCore import pyqtSignature
-# noinspection PyPackageRequirements
-from PyQt4.QtGui import QListWidgetItem, QPixmap
-
+from PyQt4.QtGui import QListWidgetItem, QPixmap, QFont
 from qgis.core import QgsMapLayerRegistry
 
+from safe import messaging as m
 from safe.definitions.layer_purposes import layer_purpose_hazard
-from safe.utilities.resources import resources_path
-
-from safe.gui.tools.wizard.wizard_step import get_wizard_step_ui_class
-from safe.gui.tools.wizard.wizard_step import WizardStep
+from safe.gui.tools.wizard.utilities import get_image_path
+from safe.gui.tools.wizard.wizard_step import (
+    WizardStep, get_wizard_step_ui_class)
+from safe.utilities.i18n import tr
 
 __copyright__ = "Copyright 2016, The InaSAFE Project"
 __license__ = "GPL version 3"
@@ -38,7 +24,7 @@ FORM_CLASS = get_wizard_step_ui_class(__file__)
 
 
 class StepFcHazLayerFromCanvas(WizardStep, FORM_CLASS):
-    """Function Centric Wizard Step: Hazard Layer From Canvas"""
+    """InaSAFE Wizard Step Hazard Layer Canvas."""
 
     def is_ready_to_next_step(self):
         """Check if the step is complete. If so, there is
@@ -93,10 +79,11 @@ class StepFcHazLayerFromCanvas(WizardStep, FORM_CLASS):
         else:
             return None
         try:
-            layer_id = item.data(QtCore.Qt.UserRole)
+            layer_id = item.data(Qt.UserRole)
         except (AttributeError, NameError):
             layer_id = None
 
+        # noinspection PyArgumentList
         layer = QgsMapLayerRegistry.instance().mapLayer(layer_id)
         return layer
 
@@ -106,20 +93,20 @@ class StepFcHazLayerFromCanvas(WizardStep, FORM_CLASS):
         :returns: Metadata of found layers.
         :rtype: list of dicts
         """
-        italic_font = QtGui.QFont()
+        italic_font = QFont()
         italic_font.setItalic(True)
         list_widget = self.lstCanvasHazLayers
         # Add compatible layers
         list_widget.clear()
         for layer in self.parent.get_compatible_canvas_layers('hazard'):
             item = QListWidgetItem(layer['name'], list_widget)
-            item.setData(QtCore.Qt.UserRole, layer['id'])
+            item.setData(Qt.UserRole, layer['id'])
             if not layer['keywords']:
                 item.setFont(italic_font)
             list_widget.addItem(item)
 
     def set_widgets(self):
-        """Set widgets on the Hazard Layer From TOC tab"""
+        """Set widgets on the Hazard Layer From TOC tab."""
         # The list is already populated in the previous step, but now we
         # need to do it again in case we're back from the Keyword Wizard.
         # First, preserve self.parent.layer before clearing the list
@@ -132,14 +119,38 @@ class StepFcHazLayerFromCanvas(WizardStep, FORM_CLASS):
             layers = []
             for index in xrange(self.lstCanvasHazLayers.count()):
                 item = self.lstCanvasHazLayers.item(index)
-                layers += [item.data(QtCore.Qt.UserRole)]
+                layers += [item.data(Qt.UserRole)]
             if last_layer in layers:
                 self.lstCanvasHazLayers.setCurrentRow(layers.index(last_layer))
 
         # Set icon
         hazard = self.parent.step_fc_functions1.selected_value(
             layer_purpose_hazard['key'])
-        icon_path = resources_path(
-            'img', 'wizard', 'keyword-subcategory-%s.svg' % (
-                hazard['key'] or 'notset'))
+        icon_path = get_image_path(hazard)
         self.lblIconIFCWHazardFromCanvas.setPixmap(QPixmap(icon_path))
+
+    @property
+    def step_name(self):
+        """Get the human friendly name for the wizard step.
+
+        :returns: The name of the wizard step.
+        :rtype: str
+        """
+        # noinspection SqlDialectInspection,SqlNoDataSourceInspection
+        return tr('Select Hazard from Canvas Step')
+
+    def help_content(self):
+        """Return the content of help for this step wizard.
+
+            We only needs to re-implement this method in each wizard step.
+
+        :returns: A message object contains help.
+        :rtype: m.Message
+        """
+        message = m.Message()
+        message.add(m.Paragraph(tr(
+            'In this wizard step: {step_name}, You can choose a hazard layer '
+            'from the list of layers that have been loaded to QGIS and that '
+            'matches with the geometry and hazard type you set in the '
+            'previous step').format(step_name=self.step_name)))
+        return message

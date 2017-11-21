@@ -1,7 +1,7 @@
 # coding=utf-8
 """Default Select Parameter."""
 
-from safe_extras.parameters.select_parameter import SelectParameter
+from parameters.select_parameter import SelectParameter
 
 __copyright__ = "Copyright 2016, The InaSAFE Project"
 __license__ = "GPL version 3"
@@ -66,7 +66,7 @@ class DefaultSelectParameter(SelectParameter):
 
     @property
     def minimum(self):
-        """Property for minimum value"""
+        """Property for minimum value."""
         return self._min_value
 
     @minimum.setter
@@ -80,7 +80,7 @@ class DefaultSelectParameter(SelectParameter):
 
     @property
     def maximum(self):
-        """Property for maximum value"""
+        """Property for maximum value."""
         return self._max_value
 
     @maximum.setter

@@ -124,7 +124,7 @@ adult_ratio_default_value = {
     # Updated for InaSAFE 4.1
     # http://data.un.org/Data.aspx?d=PopDiv&f=variableID%3a103
     # UNSD World Data, 2010.
-    'default_value': 0.679,
+    'default_value': 0.657,
     'min_value': 0,
     'max_value': 1,
     'increment': 0.001,
@@ -203,24 +203,10 @@ child_bearing_age_ratio_default_value = {
     'max_value': 1,
     'increment': 0.001,
     'description': tr(
-        'Default ratio of people of child bearing age per 100 people in the '
+        'Default ratio of child bearing age per 100 people in the '
         'total population.')
 }
 
-pregnant_lactating_ratio_default_value = {
-    'key': 'pregnant_lactating_ratio_default_value',
-    'name': tr('Pregnant or Lactating Ratio Global Default'),
-    'default_value': 0.05,
-    # Updated for InaSAFE 4.1
-    # http://www.spherehandbook.org/en/appendix-6/
-    # UNSD World Population Data, 2010.
-    'min_value': 0,
-    'max_value': 1,
-    'increment': 0.001,
-    'description': tr(
-        'Default ratio of pregnant or lactating people per 100 people in the '
-        'total population.')
-}
 pregnant_ratio_default_value = {
     'key': 'pregnant_ratio_default_value',
     'name': tr('Pregnant Ratio Global Default'),

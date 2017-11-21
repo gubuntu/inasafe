@@ -9,17 +9,16 @@ Minimum value IS NOT included, but maximum value IS included to the range.
 Mathematical expression:
 minimum_value < x <= maximum_value
 """
-from safe.definitions.constants import big_number
-from safe.definitions.earthquake import earthquake_fatality_rate
 from safe.definitions import concepts
-from safe.utilities.i18n import tr
-from safe.definitions.units import (
-    unit_centimetres,
-    unit_miles_per_hour,
-    unit_kilometres_per_hour,
-    unit_knots,
-    unit_metres_per_second
-)
+from safe.definitions.constants import big_number
+from safe.definitions.earthquake import (
+    earthquake_fatality_rate, current_earthquake_model_name)
+from safe.definitions.exposure import (
+    exposure_land_cover,
+    exposure_place,
+    exposure_population,
+    exposure_road,
+    exposure_structure)
 from safe.definitions.styles import (
     grey,
     green,
@@ -39,12 +38,14 @@ from safe.definitions.styles import (
     MMI_3,
     MMI_2,
     MMI_1)
-from safe.definitions.exposure import (
-    exposure_land_cover,
-    exposure_place,
-    exposure_population,
-    exposure_road,
-    exposure_structure)
+from safe.definitions.units import (
+    unit_centimetres,
+    unit_miles_per_hour,
+    unit_kilometres_per_hour,
+    unit_knots,
+    unit_metres_per_second
+)
+from safe.utilities.i18n import tr
 
 __copyright__ = "Copyright 2016, The InaSAFE Project"
 __license__ = "GPL version 3"
@@ -77,7 +78,7 @@ generic_hazard_classes = {
             'key': 'high',
             'color': red,
             'value': 3,
-            'name': tr('High hazard zone'),
+            'name': tr('High'),
             'affected': True,
             'description': tr('The area with the highest hazard.'),
             'string_defaults': ['high'],
@@ -96,7 +97,7 @@ generic_hazard_classes = {
             'key': 'medium',
             'color': orange,
             'value': 2,
-            'name': tr('Medium hazard zone'),
+            'name': tr('Medium'),
             'affected': True,
             'description': tr('The area with the medium hazard.'),
             'string_defaults': ['medium'],
@@ -115,7 +116,7 @@ generic_hazard_classes = {
             'key': 'low',
             'value': 1,
             'color': yellow,
-            'name': tr('Low hazard zone'),
+            'name': tr('Low'),
             'affected': False,
             'description': tr(
                 'The area with the lowest hazard.'),
@@ -150,7 +151,10 @@ earthquake_mmi_scale = {
         'from imperceptible shaking to catastrophic destruction, is '
         'designated by Roman numerals. It does not have a mathematical '
         'basis; instead it is an arbitrary ranking based on observed '
-        'effects.'),
+        'effects. Note that fatality rates listed here are based on the '
+        'active earthquake fatality model (currently set to %s). Users '
+        'can select the active earthquake fatality model in InaSAFE '
+        'Options.' % current_earthquake_model_name()),
     'type': hazard_classification_type,
     'citations': [
         {
@@ -421,7 +425,7 @@ volcano_hazard_classes = {
             'key': 'high',
             'value': 3,
             'color': red,
-            'name': tr('High hazard zone'),
+            'name': tr('High'),
             'affected': True,
             'description': tr('The highest hazard class.'),
             'string_defaults': ['Kawasan Rawan Bencana III', 'high'],
@@ -439,7 +443,7 @@ volcano_hazard_classes = {
             'key': 'medium',
             'value': 2,
             'color': orange,
-            'name': tr('Medium hazard zone'),
+            'name': tr('Medium'),
             'affected': True,
             'description': tr('The medium hazard class.'),
             'string_defaults': ['Kawasan Rawan Bencana II', 'medium'],
@@ -457,7 +461,7 @@ volcano_hazard_classes = {
             'key': 'low',
             'value': 1,
             'color': yellow,
-            'name': tr('Low hazard zone'),
+            'name': tr('Low'),
             'affected': False,
             'description': tr('The lowest hazard class.'),
             'string_defaults': ['Kawasan Rawan Bencana I', 'low'],
@@ -564,18 +568,18 @@ flood_petabencana_hazard_classes = {
     'classes': [
         {
             'key': 'high',
-            'value': 3,
+            'value': 4,
             'color': red,
             'name': tr('High'),
             'affected': True,
-            'description': tr('Water is above waist height.'),
+            'description': tr('Flooding is over 150 centimetres.'),
             'fatality_rate': None,
             # displacement rate estimated from DMI analysis of historical
             # flood data and IDP numbers
             'displacement_rate': 0.05,
             'numeric_default_min': 1.5,
             'numeric_default_max': big_number,
-            'string_defaults': ['high'],
+            'string_defaults': ['high', 'severe'],
             'citations': [
                 {
                     'text': None,
@@ -585,19 +589,19 @@ flood_petabencana_hazard_classes = {
         },
         {
             'key': 'medium',
-            'value': 2,
+            'value': 3,
             'color': orange,
             'name': tr('Medium'),
             'affected': True,
             'description': tr(
-                'Water is above knee height, below waist height.'),
+                'Flooding between 71 and 150 centimetres.'),
             'fatality_rate': None,
             # displacement rate estimated from DMI analysis of historical
             # flood data and IDP numbers
             'displacement_rate': 0.03,
             'numeric_default_min': 0.7,
             'numeric_default_max': 1.5,
-            'string_defaults': ['medium'],
+            'string_defaults': ['medium', 'moderate'],
             'citations': [
                 {
                     'text': None,
@@ -607,19 +611,19 @@ flood_petabencana_hazard_classes = {
         },
         {
             'key': 'low',
-            'value': 1,
+            'value': 2,
             'color': yellow,
             'name': tr('Low'),
             'affected': True,
             'description': tr(
-                'Water encountered up to knee deep.'),
+                'Flooding of between 10 and 70 centimetres.'),
             'fatality_rate': None,
             # displacement rate estimated from DMI analysis of historical
             # flood data and IDP numbers
             'displacement_rate': 0.01,
             'numeric_default_min': 0.1,
             'numeric_default_max': 0.7,
-            'string_defaults': ['low'],
+            'string_defaults': ['low', 'minor'],
             'citations': [
                 {
                     'text': None,
@@ -634,16 +638,14 @@ flood_petabencana_hazard_classes = {
             'name': tr('Use caution'),
             'affected': False,
             'description': tr(
-                'No water encountered above ground height but there are may '
-                'be floods in surrounding areas and you should use caution '
-                'when moving around in this area.'),
+                'An unknown level of flooding - use caution - '),
             'fatality_rate': None,
             # displacement rate estimated from DMI analysis of historical
             # flood data and IDP numbers
             'displacement_rate': 0.0,
             'numeric_default_min': 0,
             'numeric_default_max': 0.1,
-            'string_defaults': ['caution'],
+            'string_defaults': ['caution', 'unknown'],
             'citations': [
                 {
                     'text': None,
@@ -684,7 +686,7 @@ ash_hazard_classes = {
             'displacement_rate': 1.0,
             'numeric_default_min': 10,
             'numeric_default_max': big_number,
-            'string_defaults': ['very hight'],
+            'string_defaults': ['very high'],
             'citations': [
                 {
                     'text': None,
@@ -820,7 +822,7 @@ tsunami_hazard_classes = {
             'key': 'high',
             'value': 4,
             'color': red,
-            'name': tr('High hazard zone'),
+            'name': tr('High'),
             'affected': True,
             'description': tr(
                 'The area is potentially hit by a tsunami wave with an '
@@ -848,7 +850,7 @@ tsunami_hazard_classes = {
             'key': 'medium',
             'value': 3,
             'color': orange,
-            'name': tr('Medium hazard zone'),
+            'name': tr('Medium'),
             'affected': True,
             'description': tr(
                 'Water above 1.1m and less than 3.0m. The area is potentially '
@@ -874,7 +876,7 @@ tsunami_hazard_classes = {
             'key': 'low',
             'value': 2,
             'color': yellow,
-            'name': tr('Low hazard zone'),
+            'name': tr('Low'),
             'affected': False,
             'description': tr(
                 'Water above ground height and less than 1.0m. The area is '
@@ -952,7 +954,7 @@ tsunami_hazard_population_classes = {
             'key': 'high',
             'value': 4,
             'color': red,
-            'name': tr('High hazard zone'),
+            'name': tr('High'),
             'affected': True,
             'description': tr(
                 'The area is potentially hit by a tsunami wave with an '
@@ -980,7 +982,7 @@ tsunami_hazard_population_classes = {
             'key': 'medium',
             'value': 3,
             'color': orange,
-            'name': tr('Medium hazard zone'),
+            'name': tr('Medium'),
             'affected': True,
             'description': tr(
                 'Water above 0.7m and less than 3.0m. The area is potentially '
@@ -1006,7 +1008,7 @@ tsunami_hazard_population_classes = {
             'key': 'low',
             'value': 2,
             'color': yellow,
-            'name': tr('Low hazard zone'),
+            'name': tr('Low'),
             'affected': True,
             'description': tr(
                 'Water above ground height and less than 1.0m. The area is '
@@ -1060,7 +1062,7 @@ tsunami_hazard_classes_ITB = {
             'key': 'very high',
             'value': 5,
             'color': dark_red,
-            'name': tr('Very high hazard zone'),
+            'name': tr('Very high'),
             'affected': True,
             'description': tr('Water above 8.0m.'),
             'string_defaults': ['very high'],
@@ -1079,7 +1081,7 @@ tsunami_hazard_classes_ITB = {
             'key': 'high',
             'value': 4,
             'color': red,
-            'name': tr('High hazard zone'),
+            'name': tr('High'),
             'affected': True,
             'description': tr(
                 'Water above 3.1m and less than 8.0m. The area is '
@@ -1108,7 +1110,7 @@ tsunami_hazard_classes_ITB = {
             'key': 'medium',
             'value': 3,
             'color': orange,
-            'name': tr('Medium hazard zone'),
+            'name': tr('Medium'),
             'affected': True,
             'description': tr(
                 'Water above 1.1m and less than 3.0m. The area is potentially '
@@ -1134,7 +1136,7 @@ tsunami_hazard_classes_ITB = {
             'key': 'low',
             'value': 2,
             'color': yellow,
-            'name': tr('Low hazard zone'),
+            'name': tr('Low'),
             'affected': False,
             'description': tr(
                 'Water above ground height and less than 1.0m. The area is '
@@ -1211,7 +1213,7 @@ tsunami_hazard_population_classes_ITB = {
             'key': 'very high',
             'value': 5,
             'color': dark_red,
-            'name': tr('Very high hazard zone'),
+            'name': tr('Very high'),
             'affected': True,
             'description': tr('Water above 8.0m.'),
             'string_defaults': ['very high'],
@@ -1230,7 +1232,7 @@ tsunami_hazard_population_classes_ITB = {
             'key': 'high',
             'value': 4,
             'color': red,
-            'name': tr('High hazard zone'),
+            'name': tr('High'),
             'affected': True,
             'description': tr(
                 'Water above 3.1m and less than 8.0m. The area is '
@@ -1259,7 +1261,7 @@ tsunami_hazard_population_classes_ITB = {
             'key': 'medium',
             'value': 3,
             'color': orange,
-            'name': tr('Medium hazard zone'),
+            'name': tr('Medium'),
             'affected': True,
             'description': tr(
                 'Water above 1.1m and less than 3.0m. The area is potentially '
@@ -1285,7 +1287,7 @@ tsunami_hazard_population_classes_ITB = {
             'key': 'low',
             'value': 2,
             'color': yellow,
-            'name': tr('Low hazard zone'),
+            'name': tr('Low'),
             'affected': True,
             'description': tr(
                 'Water above ground height and less than 1.0m. The area is '
@@ -1424,7 +1426,7 @@ cyclone_au_bom_hazard_classes = {
             'name': tr('Category 3 (severe tropical cyclone)'),
             'affected': True,
             'description': tr(
-                'Some roof and structural damage. Some caravans destroyed.'
+                'Some roof and structural damage. Some caravans destroyed. '
                 'Power failures likely. A Category 3 cyclone\'s strongest '
                 'winds are VERY DESTRUCTIVE winds with typical gusts over '
                 'open flat land of 90 - 121 kt. '

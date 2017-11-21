@@ -1,11 +1,14 @@
 # coding=utf-8
-"""InaSAFE Keyword Wizard Layer Mode Step."""
+"""InaSAFE Wizard Step Layer Mode."""
 
 # noinspection PyPackageRequirements
 from PyQt4 import QtCore
 from PyQt4.QtGui import QListWidgetItem
 
+from safe import messaging as m
 from safe.common.exceptions import InvalidWizardStep
+from safe.definitions.layer_modes import layer_mode_continuous
+from safe.definitions.utilities import definition, get_layer_modes
 from safe.gui.tools.wizard.wizard_step import (
     get_wizard_step_ui_class, WizardStep)
 from safe.gui.tools.wizard.wizard_strings import (
@@ -14,8 +17,7 @@ from safe.gui.tools.wizard.wizard_strings import (
     layer_mode_vector_classified_confirm,
     layer_mode_vector_continuous_confirm)
 from safe.utilities.gis import is_raster_layer
-from safe.definitions.utilities import definition, get_layer_modes
-from safe.definitions.layer_modes import layer_mode_continuous
+from safe.utilities.i18n import tr
 
 __copyright__ = "Copyright 2016, The InaSAFE Project"
 __license__ = "GPL version 3"
@@ -26,7 +28,8 @@ FORM_CLASS = get_wizard_step_ui_class(__file__)
 
 
 class StepKwLayerMode(WizardStep, FORM_CLASS):
-    """Keyword Wizard Step: Layer Mode."""
+
+    """InaSAFE Wizard Step Layer Mode."""
 
     def is_ready_to_next_step(self):
         """Check if the step is complete.
@@ -95,8 +98,7 @@ class StepKwLayerMode(WizardStep, FORM_CLASS):
             return None
 
     def clear_further_steps(self):
-        """ Clear all further steps
-            in order to properly calculate the prev step
+        """Clear all further steps in order to properly calculate the prev step
         """
         self.parent.step_kw_unit.lstUnits.clear()
         self.parent.step_kw_field.lstFields.clear()
@@ -148,3 +150,27 @@ class StepKwLayerMode(WizardStep, FORM_CLASS):
         self.lstLayerModes.setCurrentRow(index)
 
         self.auto_select_one_item(self.lstLayerModes)
+
+    @property
+    def step_name(self):
+        """Get the human friendly name for the wizard step.
+
+        :returns: The name of the wizard step.
+        :rtype: str
+        """
+        return tr('Layer Mode Step')
+
+    def help_content(self):
+        """Return the content of help for this step wizard.
+
+            We only needs to re-implement this method in each wizard step.
+
+        :returns: A message object contains help.
+        :rtype: m.Message
+        """
+        message = m.Message()
+        message.add(m.Paragraph(tr(
+            'In this wizard step: {step_name}, you will be able to set the '
+            'mode of the layer that is being assigned in this wizard.'
+        ).format(step_name=self.step_name)))
+        return message

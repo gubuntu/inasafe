@@ -1,20 +1,22 @@
 # coding=utf-8
 
+"""Helpers to generate and display messages in the dock."""
+
 import logging
 
-from safe_extras.pydispatch import dispatcher
+from pydispatch import dispatcher
 
-from safe.definitions.messages import limitations, disclaimer
 from safe import messaging as m
-from safe.messaging import styles
 from safe.common.signals import (
     DYNAMIC_MESSAGE_SIGNAL,
     STATIC_MESSAGE_SIGNAL,
     ERROR_MESSAGE_SIGNAL,
     send_static_message
 )
-from safe.utilities.resources import resources_path
+from safe.definitions.messages import limitations, disclaimer
+from safe.messaging import styles
 from safe.utilities.i18n import tr
+from safe.utilities.resources import resources_path
 
 __copyright__ = "Copyright 2016, The InaSAFE Project"
 __license__ = "GPL version 3"
@@ -42,7 +44,6 @@ def missing_keyword_message(sender, missing_keyword_exception):
 
     :param missing_keyword_exception: A KeywordNotFoundError exception.
     :type missing_keyword_exception: KeywordNotFoundError
-
     """
     warning_heading = m.Heading(
         tr('Missing Keyword'), **WARNING_STYLE)
@@ -59,14 +60,14 @@ def missing_keyword_message(sender, missing_keyword_exception):
         )
     )
     suggestion = m.Paragraph(
-            tr('Please use the keyword wizard to update the keywords. You '
-               'can open the wizard by clicking on the '),
-            m.Image(
-                'file:///%s/img/icons/'
-                'show-keyword-wizard.svg' % resources_path(),
-                **SMALL_ICON_STYLE),
-            tr(
-                ' icon in the toolbar.'))
+        tr('Please use the keyword wizard to update the keywords. You '
+           'can open the wizard by clicking on the '),
+        m.Image(
+            'file:///%s/img/icons/'
+            'show-keyword-wizard.svg' % resources_path(),
+            **SMALL_ICON_STYLE),
+        tr(' icon in the toolbar.')
+    )
 
     message = m.Message()
     message.add(warning_heading)
@@ -76,6 +77,36 @@ def missing_keyword_message(sender, missing_keyword_exception):
     message.add(suggestion_heading)
     message.add(suggestion)
     send_static_message(sender, message)
+
+
+def conflicting_plugin_string():
+    """Return the error message when a plugin is conflicting with InaSAFE.
+
+    :return: The error string.
+    :rtype: basestring
+    """
+    message = tr(
+        'The plugin EmergencyMapper is conflicting with InaSAFE. You may have '
+        'some issues by running InaSAFE. You should remove the other plugin, '
+        'not only disable it. Check that the folder doesn\'t exist '
+        'anymore on your system.')
+    return message
+
+
+def conflicting_plugin_message():
+    """Unfortunately, one plugin is conflicting with InaSAFE.
+
+    We are displaying a message about this conflict.
+
+    :returns: Information for the user on how to get started.
+    :rtype: safe.messaging.Message
+    """
+    message = m.Message()
+    message.add(LOGO_ELEMENT)
+    message.add(m.Heading(tr('Conflicting plugin detected'), **WARNING_STYLE))
+    notes = m.Paragraph(conflicting_plugin_string())
+    message.add(notes)
+    return message
 
 
 def getting_started_message():

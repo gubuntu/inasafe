@@ -1,25 +1,15 @@
 # coding=utf-8
-"""
-InaSAFE Disaster risk assessment tool by AusAid -**InaSAFE Wizard**
-
-This module provides: Function Centric Wizard Step: Hazard Layer From Browser
-
-Contact : ole.moller.nielsen@gmail.com
-
-.. note:: This program is free software; you can redistribute it and/or modify
-     it under the terms of the GNU General Public License as published by
-     the Free Software Foundation; either version 2 of the License, or
-     (at your option) any later version.
-
-"""
+"""InaSAFE Wizard Step Hazard Layer Browser."""
 
 # noinspection PyPackageRequirements
 from PyQt4.QtGui import QPixmap
 
+from safe import messaging as m
 from safe.definitions.layer_purposes import layer_purpose_hazard
-from safe.utilities.resources import resources_path
+from safe.gui.tools.wizard.utilities import get_image_path
 from safe.gui.tools.wizard.wizard_step import get_wizard_step_ui_class
 from safe.gui.tools.wizard.wizard_step_browser import WizardStepBrowser
+from safe.utilities.i18n import tr
 
 __copyright__ = "Copyright 2016, The InaSAFE Project"
 __license__ = "GPL version 3"
@@ -30,7 +20,7 @@ FORM_CLASS = get_wizard_step_ui_class(__file__)
 
 
 class StepFcHazLayerFromBrowser(WizardStepBrowser, FORM_CLASS):
-    """Function Centric Wizard Step: Hazard Layer From Browser"""
+    """InaSAFE Wizard Step Hazard Layer Browser."""
 
     def __init__(self, parent=None):
         """Constructor for the tab.
@@ -71,7 +61,7 @@ class StepFcHazLayerFromBrowser(WizardStepBrowser, FORM_CLASS):
 
     # noinspection PyPep8Naming
     def tvBrowserHazard_selection_changed(self):
-        """Update layer description label"""
+        """Update layer description label."""
         (is_compatible, desc) = self.get_layer_description_from_browser(
             'hazard')
         self.lblDescribeBrowserHazLayer.setText(desc)
@@ -79,13 +69,37 @@ class StepFcHazLayerFromBrowser(WizardStepBrowser, FORM_CLASS):
         self.parent.pbnNext.setEnabled(is_compatible)
 
     def set_widgets(self):
-        """Set widgets on the Hazard Layer From Browser tab"""
+        """Set widgets on the Hazard Layer From Browser tab."""
         self.tvBrowserHazard_selection_changed()
 
         # Set icon
         hazard = self.parent.step_fc_functions1.selected_value(
             layer_purpose_hazard['key'])
-        icon_path = resources_path(
-            'img', 'wizard', 'keyword-subcategory-%s.svg'
-                             % (hazard['key'] or 'notset'))
+        icon_path = get_image_path(hazard)
         self.lblIconIFCWHazardFromBrowser.setPixmap(QPixmap(icon_path))
+
+    @property
+    def step_name(self):
+        """Get the human friendly name for the wizard step.
+
+        :returns: The name of the wizard step.
+        :rtype: str
+        """
+        # noinspection SqlDialectInspection,SqlNoDataSourceInspection
+        return tr('Select Hazard from Browser Step')
+
+    def help_content(self):
+        """Return the content of help for this step wizard.
+
+            We only needs to re-implement this method in each wizard step.
+
+        :returns: A message object contains help.
+        :rtype: m.Message
+        """
+        message = m.Message()
+        message.add(m.Paragraph(tr(
+            'In this wizard step: {step_name}, You can choose a hazard layer '
+            'from the list of layers from local disk or postgres database '
+            'that matches with the geometry and hazard type you set in the '
+            'previous step').format(step_name=self.step_name)))
+        return message

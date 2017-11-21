@@ -6,7 +6,8 @@ from PyQt4.QtCore import QVariant
 
 from safe.definitions import concepts
 from safe.definitions.constants import (
-    qvariant_whole_numbers, qvariant_numbers)
+    qvariant_whole_numbers, qvariant_numbers, qvariant_all)
+from safe.definitions.currencies import currencies
 from safe.definitions.default_values import (
     female_ratio_default_value,
     male_ratio_default_value,
@@ -20,10 +21,10 @@ from safe.definitions.default_values import (
     over_60_ratio_default_value,
     disabled_ratio_default_value,
     child_bearing_age_ratio_default_value,
-    pregnant_lactating_ratio_default_value,
     pregnant_ratio_default_value,
     lactating_ratio_default_value
 )
+from safe.definitions.units import unit_hundred_kilograms
 from safe.utilities.i18n import tr
 
 __copyright__ = "Copyright 2016, The InaSAFE Project"
@@ -194,17 +195,18 @@ hazard_name_field = {
 }
 
 # Hazard Value
+
 hazard_value_field = {
     'key': 'hazard_value_field',
     'name': tr('Hazard Value'),
     'field_name': 'hazard_value',
-    'type': [QVariant.String, QVariant.Int, QVariant.Double],
+    'type': qvariant_all,
     'length': default_field_length,
     'precision': 0,
     'help_text': tr(
         'A VALUE attribute for the hazard.'),
     'description': tr(
-        'The value attribute for a layer describes the intensity of a hazard'
+        'The value attribute for a layer describes the intensity of a hazard '
         'over the area described by the geometry of the feature. For example '
         'a flood polygon may have a hazard value of "1" indicating that the '
         'flood depth over that whole polygon is 1m. The hazard value is the '
@@ -212,7 +214,7 @@ hazard_value_field = {
         'classify the values in the value field into thresholds. For example, '
         'values greater than or equal to zero meters and less than 0.5m '
         'might be a reclassified into a threshold used to define a "Low" '
-        'flood class).'),
+        'flood class.'),
     'citations': [
         {
             'text': None,
@@ -222,7 +224,6 @@ hazard_value_field = {
     # Null value can be replaced by default or not
     'replace_null': False
 }
-
 # Hazard Class
 hazard_class_field = {
     'key': 'hazard_class_field',
@@ -302,26 +303,6 @@ aggregation_name_field = {
 # # # # # # # # # #
 # Analysis
 # # # # # # # # # #
-
-analysis_id_field = {
-    'key': 'analysis_id_field',
-    'name': tr('Analysis ID'),
-    'field_name': 'analysis_id',
-    'type': qvariant_whole_numbers,
-    'length': default_field_length,
-    'precision': 0,
-    'absolute': False,
-    'description': tr(  # short description
-        'An ID attribute in the analysis layer.'),
-    'help_text': tr(
-        'A unique identifier for each analysis feature.'),
-    'citations': [
-        {
-            'text': None,
-            'link': None
-        }
-    ]
-}
 
 analysis_name_field = {
     'key': 'analysis_name_field',
@@ -487,6 +468,7 @@ female_count_field = {
     'key': 'female_count_field',
     'name': tr('Female Count'),
     'field_name': 'female',
+    'header_name': tr('Female'),
     'type': qvariant_numbers,
     'length': default_field_length,
     'precision': 0,
@@ -517,6 +499,7 @@ male_count_field = {
     'key': 'male_count_field',
     'name': tr('Male Count'),
     'field_name': 'male',
+    'header_name': tr('Male'),
     'type': qvariant_numbers,
     'length': default_field_length,
     'precision': 0,
@@ -546,6 +529,7 @@ child_bearing_age_count_field = {
     'key': 'child_bearing_age_count_field',
     'name': tr('Child Bearing Age Count'),
     'field_name': 'child_bearing_age',
+    'header_name': tr('Child Bearing Age'),
     'type': qvariant_numbers,
     'length': default_field_length,
     'precision': 0,
@@ -571,40 +555,12 @@ child_bearing_age_count_field = {
     'replace_null': False
 }
 
-# Pregnant or Lactating Count
-pregnant_lactating_count_field = {
-    'key': 'pregnant_lactating_count_field',
-    'name': tr('Pregnant or Lactating Count'),
-    'field_name': 'pregnant_lactating',
-    'type': qvariant_numbers,
-    'length': default_field_length,
-    'precision': 0,
-    'absolute': True,
-    'description': tr(
-        'The number of pregnant or lactating for each feature.'),
-    'help_text': tr(
-        '"Pregnant or Lactating" is defined as: {concept} In cases where '
-        'population data is available, InaSAFE will calculate the number of '
-        'pregnant or lactating people per exposure feature, aggregate hazard '
-        'area, aggregation area and for the analysis area as a whole. The '
-        'pregnant or lactating count is calculated based on standard ratios '
-        'either provided as a global setting in InaSAFE, or (if available) '
-        'ratios in the input analysis data.').format(
-            concept=concepts['pregnant_lactating']['description']),
-    'citations': [
-        {
-            'text': None,
-            'link': None
-        }
-    ],
-    # Null value can be replaced by default or not
-    'replace_null': False
-}
 # Pregnant Count
 pregnant_count_field = {
     'key': 'pregnant_count_field',
     'name': tr('Pregnant Women Count'),
     'field_name': 'pregnant',
+    'header_name': tr('Pregnant'),
     'type': qvariant_numbers,
     'length': default_field_length,
     'precision': 0,
@@ -634,6 +590,7 @@ lactating_count_field = {
     'key': 'lactating_count_field',
     'name': tr('Lactating Count'),
     'field_name': 'lactating',
+    'header_name': tr('Lactating'),
     'type': qvariant_numbers,
     'length': default_field_length,
     'precision': 0,
@@ -664,6 +621,7 @@ infant_count_field = {
     'key': 'infant_count_field',
     'name': tr('Infant Count'),
     'field_name': 'infant',
+    'header_name': tr('Infant'),
     'type': qvariant_numbers,
     'length': default_field_length,
     'precision': 0,
@@ -693,6 +651,7 @@ child_count_field = {
     'key': 'child_count_field',
     'name': tr('Child Count'),
     'field_name': 'child',
+    'header_name': tr('Child'),
     'type': qvariant_numbers,
     'length': default_field_length,
     'precision': 0,
@@ -722,6 +681,7 @@ youth_count_field = {
     'key': 'youth_count_field',
     'name': tr('Youth Count'),
     'field_name': 'youth',
+    'header_name': tr('Youth'),
     'type': qvariant_numbers,
     'length': default_field_length,
     'precision': 0,
@@ -754,6 +714,7 @@ adult_count_field = {
     'key': 'adult_count_field',
     'name': tr('Adult Count'),
     'field_name': 'adult',
+    'header_name': tr('Adult'),
     'type': qvariant_numbers,
     'length': default_field_length,
     'precision': 0,
@@ -783,6 +744,7 @@ elderly_count_field = {
     'key': 'elderly_count_field',
     'name': tr('Elderly Count'),
     'field_name': 'elderly',
+    'header_name': tr('Elderly'),
     'type': qvariant_numbers,
     'length': default_field_length,
     'precision': 0,
@@ -812,6 +774,7 @@ under_5_count_field = {
     'key': 'under_5_count_field',
     'name': tr('Under 5 Count'),
     'field_name': 'under_5',
+    'header_name': tr('Under 5'),
     'type': qvariant_numbers,
     'length': default_field_length,
     'precision': 0,
@@ -841,6 +804,7 @@ over_60_count_field = {
     'key': 'over_60_count_field',
     'name': tr('Over 60 Count'),
     'field_name': 'over_60',
+    'header_name': tr('Over 60'),
     'type': qvariant_numbers,
     'length': default_field_length,
     'precision': 0,
@@ -870,6 +834,7 @@ disabled_count_field = {
     'key': 'disabled_count_field',
     'name': tr('Disabled Count'),
     'field_name': 'disabled',
+    'header_name': tr('Disabled'),
     'type': qvariant_numbers,
     'length': default_field_length,
     'precision': 0,
@@ -904,10 +869,10 @@ size_field = {
     'precision': 2,
     'absolute': True,
     'description': tr(
-        'Attribute where the size of the gemetry is located.'
+        'Attribute where the size of the geometry is located.'
     ),
     'help_text': tr(
-        'Attribute where the size of the gemetry is located.'
+        'Attribute where the size of the geometry is located.'
     ),
     'citations': [
         {
@@ -976,6 +941,7 @@ female_ratio_field = {
     'key': 'female_ratio_field',
     'name': tr('Female Ratio'),
     'field_name': 'female_ratio',
+    'header_name': tr('Female'),
     'type': QVariant.Double,
     'length': default_field_length,
     'precision': default_ratio_field_precision,
@@ -1006,6 +972,7 @@ male_ratio_field = {
     'key': 'male_ratio_field',
     'name': tr('Male Ratio'),
     'field_name': 'male_ratio',
+    'header_name': tr('Male'),
     'type': QVariant.Double,
     'length': default_field_length,
     'precision': default_ratio_field_precision,
@@ -1036,6 +1003,7 @@ child_bearing_age_ratio_field = {
     'key': 'child_bearing_age_ratio_field',
     'name': tr('Child Bearing Age Ratio'),
     'field_name': 'child_bearing_age_ratio',
+    'header_name': tr('Child Bearing Age'),
     'type': QVariant.Double,
     'length': default_field_length,
     'precision': default_ratio_field_precision,
@@ -1062,40 +1030,11 @@ child_bearing_age_ratio_field = {
     'default_value': child_bearing_age_ratio_default_value
 }
 
-# Pregnant Ratio Ratio
-pregnant_lactating_ratio_field = {
-    'key': 'pregnant_lactating_ratio_field',
-    'name': tr('Pregnant Lactating Ratio'),
-    'field_name': 'pregnant_lactating_ratio',
-    'type': QVariant.Double,
-    'length': default_field_length,
-    'precision': default_ratio_field_precision,
-    'absolute': False,
-    'description': tr(
-        'The proportion of pregnant or lactating women for each feature.'),
-    'help_text': tr(
-        '"Pregnant or Lactating" is defined as: {concept} In cases where '
-        'population data is available, InaSAFE will calculate the number of '
-        'pregnant or lactating women per exposure feature, aggregate hazard '
-        'area, aggregation area and for the analysis area as a whole. The '
-        'pregnant or lactating count is calculated based on standard ratios '
-        'either provided as a global setting in InaSAFE, or (if available) '
-        'ratios in the input analysis data.').format(
-        concept=concepts['pregnant_lactating']['description']),
-    'citations': [
-        {
-            'text': None,
-            'link': None
-        }
-    ],
-    # Null value can be replaced by default or not
-    'replace_null': True,
-    'default_value': pregnant_lactating_ratio_default_value
-}
 pregnant_ratio_field = {
     'key': 'pregnant_ratio_field',
     'name': tr('Pregnant Ratio'),
     'field_name': 'pregnant_ratio',
+    'header_name': tr('Pregnant'),
     'type': QVariant.Double,
     'length': default_field_length,
     'precision': default_ratio_field_precision,
@@ -1125,6 +1064,7 @@ lactating_ratio_field = {
     'key': 'lactating_ratio_field',
     'name': tr('Lactating Ratio'),
     'field_name': 'lactating_ratio',
+    'header_name': tr('Lactating'),
     'type': QVariant.Double,
     'length': default_field_length,
     'precision': default_ratio_field_precision,
@@ -1156,6 +1096,7 @@ infant_ratio_field = {
     'key': 'infant_ratio_field',
     'name': tr('Infant Ratio'),
     'field_name': 'infant_ratio',
+    'header_name': tr('Infant'),
     'type': QVariant.Double,
     'length': default_field_length,
     'precision': default_ratio_field_precision,
@@ -1186,6 +1127,7 @@ child_ratio_field = {
     'key': 'child_ratio_field',
     'name': tr('Child Ratio'),
     'field_name': 'child_ratio',
+    'header_name': tr('Child'),
     'type': QVariant.Double,
     'length': default_field_length,
     'precision': default_ratio_field_precision,
@@ -1216,6 +1158,7 @@ youth_ratio_field = {
     'key': 'youth_ratio_field',
     'name': tr('Youth Ratio'),
     'field_name': 'youth_ratio',
+    'header_name': tr('Youth'),
     'type': QVariant.Double,
     'length': default_field_length,
     'precision': default_ratio_field_precision,
@@ -1246,6 +1189,7 @@ adult_ratio_field = {
     'key': 'adult_ratio_field',
     'name': tr('Adult Ratio'),
     'field_name': 'adult_ratio',
+    'header_name': tr('Adult'),
     'type': QVariant.Double,
     'length': default_field_length,
     'precision': default_ratio_field_precision,
@@ -1276,6 +1220,7 @@ elderly_ratio_field = {
     'key': 'elderly_ratio_field',
     'name': tr('Elderly Ratio'),
     'field_name': 'elderly_ratio',
+    'header_name': tr('Elderly'),
     'type': QVariant.Double,
     'length': default_field_length,
     'precision': default_ratio_field_precision,
@@ -1306,6 +1251,7 @@ under_5_ratio_field = {
     'key': 'under_5_ratio_field',
     'name': tr('Under 5 Years Ratio'),
     'field_name': 'under_5_ratio',
+    'header_name': tr('Under 5'),
     'type': QVariant.Double,
     'length': default_field_length,
     'precision': default_ratio_field_precision,
@@ -1336,6 +1282,7 @@ over_60_ratio_field = {
     'key': 'over_60_ratio_field',
     'name': tr('Over 60 Years Ratio'),
     'field_name': 'over_60_ratio',
+    'header_name': tr('Over 60'),
     'type': QVariant.Double,
     'length': default_field_length,
     'precision': default_ratio_field_precision,
@@ -1366,6 +1313,7 @@ disabled_ratio_field = {
     'key': 'disabled_ratio_field',
     'name': tr('Disabled Ratio'),
     'field_name': 'disabled_ratio',
+    'header_name': tr('Disabled'),
     'type': QVariant.Double,
     'length': default_field_length,
     'precision': default_ratio_field_precision,
@@ -1482,6 +1430,7 @@ male_displaced_count_field = {
     'key': 'male_displaced_count_field',
     'name': tr('Male Displaced Count'),
     'field_name': 'male_displaced',
+    'header_name': tr('Male'),
     'type': qvariant_numbers,
     'length': default_field_length,
     'precision': 0,
@@ -1504,6 +1453,7 @@ female_displaced_count_field = {
     'key': 'female_displaced_count_field',
     'name': tr('Female Displaced Count'),
     'field_name': 'female_displaced',
+    'header_name': tr('Female'),
     'type': qvariant_numbers,
     'length': default_field_length,
     'precision': 0,
@@ -1526,6 +1476,7 @@ child_bearing_age_displaced_count_field = {
     'key': 'child_bearing_age_displaced_count_field',
     'name': tr('Child Bearing Age Displaced Count'),
     'field_name': 'child_bearing_age_displaced',
+    'header_name': tr('Child Bearing Age'),
     'type': qvariant_numbers,
     'length': default_field_length,
     'precision': 0,
@@ -1544,31 +1495,11 @@ child_bearing_age_displaced_count_field = {
     'replace_null': False
 }
 
-pregnant_lactating_displaced_count_field = {
-    'key': 'pregnant_lactating_displaced_count_field',
-    'name': tr('Pregnant or Lactating Displaced Count'),
-    'field_name': 'pregnant_lactating_displaced',
-    'type': qvariant_numbers,
-    'length': default_field_length,
-    'precision': 0,
-    'absolute': True,
-    'description': tr(
-        'The number of displaced pregnant or lactating for each feature.'),
-    'help_text': tr(
-        'The number of displaced pregnant or lactating for each feature.'),
-    'citations': [
-        {
-            'text': None,
-            'link': None
-        }
-    ],
-    # Null value can be replaced by default or not
-    'replace_null': False
-}
 pregnant_displaced_count_field = {
     'key': 'pregnant_displaced_count_field',
     'name': tr('Lactating Displaced Count'),
     'field_name': 'pregnant_displaced',
+    'header_name': tr('Pregnant'),
     'type': qvariant_numbers,
     'length': default_field_length,
     'precision': 0,
@@ -1590,6 +1521,7 @@ lactating_displaced_count_field = {
     'key': 'lactating_displaced_count_field',
     'name': tr('Pregnant Displaced Count'),
     'field_name': 'lactating_displaced',
+    'header_name': tr('Lactating'),
     'type': qvariant_numbers,
     'length': default_field_length,
     'precision': 0,
@@ -1608,31 +1540,11 @@ lactating_displaced_count_field = {
     'replace_null': False
 }
 
-
-male_displaced_count_field = {
-    'key': 'male_displaced_count_field',
-    'name': tr('Male Displaced Count'),
-    'field_name': 'male_displaced',
-    'type': qvariant_numbers,
-    'length': default_field_length,
-    'precision': 0,
-    'absolute': True,
-    'description': tr(
-        'Attribute where the number of displaced males for each feature.'),
-    'citations': [
-        {
-            'text': None,
-            'link': None
-        }
-    ],
-    # Null value can be replaced by default or not
-    'replace_null': False
-}
-
 infant_displaced_count_field = {
     'key': 'infant_displaced_count_field',
     'name': tr('Infant Displaced Count'),
     'field_name': 'infant_displaced',
+    'header_name': tr('Infant'),
     'type': qvariant_numbers,
     'length': default_field_length,
     'precision': 0,
@@ -1655,6 +1567,7 @@ child_displaced_count_field = {
     'key': 'child_displaced_count_field',
     'name': tr('Child Displaced Count'),
     'field_name': 'child_displaced',
+    'header_name': tr('Child'),
     'type': qvariant_numbers,
     'length': default_field_length,
     'precision': 0,
@@ -1677,6 +1590,7 @@ youth_displaced_count_field = {
     'key': 'youth_displaced_count_field',
     'name': tr('Youth Displaced Count'),
     'field_name': 'youth_displaced',
+    'header_name': tr('Youth'),
     'type': qvariant_numbers,
     'length': default_field_length,
     'precision': 0,
@@ -1699,6 +1613,7 @@ adult_displaced_count_field = {
     'key': 'adult_displaced_count_field',
     'name': tr('Adult Displaced Count'),
     'field_name': 'adult_displaced',
+    'header_name': tr('Adult'),
     'type': qvariant_numbers,
     'length': default_field_length,
     'precision': 0,
@@ -1721,6 +1636,7 @@ elderly_displaced_count_field = {
     'key': 'elderly_displaced_count_field',
     'name': tr('Elderly Displaced Count'),
     'field_name': 'elderly_displaced',
+    'header_name': tr('Elderly'),
     'type': qvariant_numbers,
     'length': default_field_length,
     'precision': 0,
@@ -1743,6 +1659,7 @@ under_5_displaced_count_field = {
     'key': 'under_5_displaced_count_field',
     'name': tr('Under 5 Displaced Count'),
     'field_name': 'under_5_displaced',
+    'header_name': tr('Under 5'),
     'type': qvariant_numbers,
     'length': default_field_length,
     'precision': 0,
@@ -1765,6 +1682,7 @@ over_60_displaced_count_field = {
     'key': 'over_60_displaced_count_field',
     'name': tr('Over 60 Years Displaced Count'),
     'field_name': 'over_60_displaced',
+    'header_name': tr('Over 60'),
     'type': qvariant_numbers,
     'length': default_field_length,
     'precision': 0,
@@ -1787,6 +1705,7 @@ disabled_displaced_count_field = {
     'key': 'disabled_displaced_count_field',
     'name': tr('Disabled Displaced Count'),
     'field_name': 'disabled_displaced',
+    'header_name': tr('Disabled'),
     'type': qvariant_numbers,
     'length': default_field_length,
     'precision': 0,
@@ -1884,8 +1803,10 @@ hygiene_packs_count_field = {
     'key': 'hygiene_packs_field',
     'name': tr('Weekly Hygiene Packs'),
     'field_name': 'hygiene_packs',
+    'header_name': tr('Hygiene Packs'),
     'type': QVariant.Int,
     'length': default_field_length,
+    'frequency': tr('weekly'),
     'precision': 0,
     'absolute': True,
     'description': tr('Number of Hygiene Packs Weekly for Women.'),
@@ -1905,12 +1826,14 @@ additional_rice_count_field = {
     'key': 'additional_rice_field',
     'name': tr('Additional Weekly Rice kg for Pregnant and Lactating Women'),
     'field_name': 'additional_rice',
+    'header_name': tr('Additional Rice'),
     'type': QVariant.Int,
     'length': default_field_length,
     'unit': {
         'name': 'Kilogram',
         'abbreviation': 'kg'
     },
+    'frequency': tr('weekly'),
     'precision': 0,
     'absolute': True,
     'help_text': tr(
@@ -1932,6 +1855,7 @@ total_affected_field = {
     'key': 'total_affected_field',
     'name': tr('Total Affected'),
     'field_name': 'total_affected',
+    'header_name': tr('Affected'),
     'type': QVariant.Double,
     'length': default_field_length,
     'precision': 2,
@@ -2012,6 +1936,34 @@ total_not_exposed_field = {
     'replace_null': False
 }
 
+# Total exposed field
+total_exposed_field = {
+    'key': 'total_exposed_field',
+    'name': tr('Total Exposed'),
+    'field_name': 'total_exposed',
+    'type': QVariant.Double,
+    'length': default_field_length,
+    'precision': 2,
+    'absolute': True,
+    'description': tr(
+        'The total exposed field stores the cumulative total number of '
+        'exposed features or entities.'),
+    'help_text': tr(
+        'The total exposed field is added to the analysis layer, '
+        'aggregate impact layer and aggregate hazard impact layer during the '
+        'impact analysis. It represents the cumulative count of exposed '
+        'exposure features (e.g. buildings) or entities (e.g. people) for '
+        'each area.'),
+    'citations': [
+        {
+            'text': None,
+            'link': None
+        }
+    ],
+    # Null value can be replaced by default or not
+    'replace_null': False
+}
+
 # # # # # # # # # #
 # Count, dynamics, outputs (Absolute values)
 # # # # # # # # # #
@@ -2048,7 +2000,7 @@ exposure_count_field = {
 affected_exposure_count_field = {
     'key': '%s_affected_field',
     'name': tr('Affected %s'),
-    'field_name': '%s_affected',
+    'field_name': '%s_affected',  # Be careful, same as total_affected_field
     'type': QVariant.Double,
     'length': default_field_length,
     'precision': default_field_precision,
@@ -2170,6 +2122,491 @@ population_displaced_per_mmi = {
     'replace_null': False
 }
 
+# # # # # # # # # #
+# Multi exposure fields
+# # # # # # # # # #
+
+# Basically, all these multi exposure fields are the same as their parents,
+# but we only add the exposure prefix to the key and field name.
+exposure_hazard_count_field = {
+    'key': '%s_' + hazard_count_field['key'],
+    'name': tr('Total %s %s'),
+    'field_name': '%s_' + hazard_count_field['field_name'],
+    'type': hazard_count_field['type'],
+    'length': hazard_count_field['length'],
+    'precision': hazard_count_field['precision'],
+    'absolute': hazard_count_field['absolute'],
+    'help_text': hazard_count_field['help_text'],
+    'description': hazard_count_field['description'],
+    'citations': hazard_count_field['citations'],
+    # Null value can be replaced by default or not
+    'replace_null': hazard_count_field['replace_null']
+}
+
+# Total affected per exposure
+exposure_total_affected_field = {
+    'key': '%s_' + total_affected_field['key'],
+    'name': tr('Total Affected %s'),
+    'field_name': '%s_' + total_affected_field['field_name'],
+    'type': total_affected_field['type'],
+    'length': total_affected_field['length'],
+    'precision': total_affected_field['precision'],
+    'absolute': total_affected_field['absolute'],
+    'help_text': total_affected_field['help_text'],
+    'description': total_affected_field['description'],
+    'citations': total_affected_field['citations'],
+    # Null value can be replaced by default or not
+    'replace_null': total_affected_field['replace_null']
+}
+
+# Total not affected per exposure
+exposure_total_not_affected_field = {
+    'key': '%s_' + total_not_affected_field['key'],
+    'name': tr('Total Not Affected %s'),
+    'field_name': '%s_' + total_not_affected_field['field_name'],
+    'type': total_not_affected_field['type'],
+    'length': total_not_affected_field['length'],
+    'precision': total_not_affected_field['precision'],
+    'absolute': total_not_affected_field['absolute'],
+    'help_text': total_not_affected_field['help_text'],
+    'description': total_not_affected_field['description'],
+    'citations': total_not_affected_field['citations'],
+    # Null value can be replaced by default or not
+    'replace_null': total_not_affected_field['replace_null']
+}
+
+# Total exposed per exposure
+exposure_total_exposed_field = {
+    'key': '%s_' + total_exposed_field['key'],
+    'name': tr('Total Exposed %s'),
+    'field_name': '%s_' + total_exposed_field['field_name'],
+    'type': total_exposed_field['type'],
+    'length': total_exposed_field['length'],
+    'precision': total_exposed_field['precision'],
+    'absolute': total_exposed_field['absolute'],
+    'help_text': total_exposed_field['help_text'],
+    'description': total_exposed_field['description'],
+    'citations': total_exposed_field['citations'],
+    # Null value can be replaced by default or not
+    'replace_null': total_exposed_field['replace_null']
+}
+
+# Total not exposed per exposure
+exposure_total_not_exposed_field = {
+    'key': '%s_' + total_not_exposed_field['key'],
+    'name': tr('Total Not Exposed %s'),
+    'field_name': '%s_' + total_not_exposed_field['field_name'],
+    'type': total_not_exposed_field['type'],
+    'length': total_not_exposed_field['length'],
+    'precision': total_not_exposed_field['precision'],
+    'absolute': total_not_exposed_field['absolute'],
+    'help_text': total_not_exposed_field['help_text'],
+    'description': total_not_exposed_field['description'],
+    'citations': total_not_exposed_field['citations'],
+    # Null value can be replaced by default or not
+    'replace_null': total_not_exposed_field['replace_null']
+}
+
+# Total per exposure
+exposure_total_field = {
+    'key': '%s_' + total_field['key'],
+    'name': tr('Total %s'),
+    'field_name': '%s_' + total_field['field_name'],
+    'type': total_field['type'],
+    'length': total_field['length'],
+    'precision': total_field['precision'],
+    'absolute': total_field['absolute'],
+    'help_text': total_field['help_text'],
+    'description': total_field['description'],
+    'citations': total_field['citations'],
+    # Null value can be replaced by default or not
+    'replace_null': total_field['replace_null']
+}
+
+# Like roads_residential_affected_field
+# or roads_other_affected_field
+# or buildings_other_affected_field
+# might be in the same layer
+exposure_affected_exposure_type_count_field = {
+    'key': '%s_' + affected_exposure_count_field['key'],
+    'name': tr('Affected %s %s'),
+    'field_name': '%s_' + affected_exposure_count_field['field_name'],
+    'type': affected_exposure_count_field['type'],
+    'length': affected_exposure_count_field['length'],
+    'precision': affected_exposure_count_field['precision'],
+    'absolute': affected_exposure_count_field['absolute'],
+    'help_text': affected_exposure_count_field['help_text'],
+    'description': affected_exposure_count_field['description'],
+    'citations': affected_exposure_count_field['citations'],
+    # Null value can be replaced by default or not
+    'replace_null': affected_exposure_count_field['replace_null']
+}
+
+# # # # # # # # # #
+# Productivity, ratio and cost
+# # # # # # # # # #
+
+# Productivity field
+productivity_rate_field = {
+    'key': 'productivity_rate_field',
+    'name': tr('Productivity Rate'),
+    'field_name': 'productivity_rate',
+    'type': qvariant_numbers,
+    'length': default_field_length,
+    'precision': 0,
+    'absolute': True,
+    'description': tr(
+        'The rate of productivity of crop land cover for each feature / '
+        'area in hundred kilograms per hectare unit.'),
+    'help_text': tr(
+        '"{name}" is defined as: {description}. In case where land cover data '
+        'is available, InaSAFE will calculate the productivity for each '
+        'land cover area (exposure feature). The productivity is calculated '
+        'based on the productivity rate multiplied by the area of the land '
+        'cover.').format(
+        name=concepts['productivity_rate']['name'],
+        description=concepts['productivity_rate']['description']
+    ),
+    'citations': [
+        {
+            'text': None,
+            'link': None
+        }
+    ],
+    # Null value can be replaced by default or not
+    'replace_null': False,
+}
+
+productivity_field = {
+    'key': 'productivity_field',
+    'name': tr('Productivity'),
+    'field_name': 'productivity',
+    'type': QVariant.Double,
+    'length': default_field_length,
+    'precision': default_field_precision,
+    'absolute': True,
+    'description': tr(
+        'The total weight of a crop that can be produced for each feature.'),
+    'help_text': tr(
+        '"{name}" is defined as: {description}. In case where land cover data '
+        'is available, InaSAFE will calculate the productivity for each '
+        'land cover area (exposure feature). The productivity is calculated '
+        'based on the productivity rate multiplied by the area of the land '
+        'cover.').format(
+        name=concepts['productivity_rate']['name'],
+        description=concepts['productivity_rate']['description']
+    ),
+    'citations': [
+        {
+            'text': None,
+            'link': None
+        }
+    ],
+    # Null value can be replaced by default or not
+    'replace_null': False,
+}
+
+affected_productivity_field = {
+    'key': 'affected_productivity_field',
+    'name': tr('Affected Productivity'),
+    'field_name': 'affected_productivity',
+    'header_name': tr('Productivity'),
+    'type': QVariant.Double,
+    'length': default_field_length,
+    'precision': default_field_precision,
+    'absolute': True,
+    'description': tr(
+        'The total weight of a crop that is affected for each feature.'),
+    'help_text': tr(
+        '"{affected_name}" is defined as: {affected_description}. This field '
+        'contains the productivity that is affected by the hazard.'
+        '').format(
+        affected_name=concepts['affected']['name'],
+        affected_description=concepts['affected']['description']),
+    'citations': [
+        {
+            'text': None,
+            'link': None
+        }
+    ],
+    # Null value can be replaced by default or not
+    'replace_null': False,
+    'units': [unit_hundred_kilograms]
+}
+
+# Production cost field
+production_cost_rate_field = {
+    'key': 'production_cost_rate_field',
+    'name': tr('Production Cost Rate'),
+    'field_name': 'production_cost_rate',
+    'type': qvariant_numbers,
+    'length': default_field_length,
+    'precision': 0,
+    'absolute': True,
+    'description': tr(
+        'The rate of production cost of a crop for each feature in '
+        'currency per hectare unit.'),
+    'help_text': tr(
+        '"{name}" is defined as: {description}. In case where land cover data '
+        'is available, InaSAFE will calculate the production cost for each '
+        'land cover area (exposure feature). The production cost is '
+        'calculated based on the production cost rate multiplied by the area '
+        'of the land cover.').format(
+        name=concepts['production_cost_rate']['name'],
+        description=concepts['production_cost_rate']['description']
+    ),
+    'citations': [
+        {
+            'text': None,
+            'link': None
+        }
+    ],
+    # Null value can be replaced by default or not
+    'replace_null': False,
+}
+
+production_cost_field = {
+    'key': 'production_cost_field',
+    'name': tr('Production Cost'),
+    'field_name': 'production_cost',
+    'type': QVariant.Double,
+    'length': default_field_length,
+    'precision': default_field_precision,
+    'absolute': True,
+    'description': tr(
+        'The total production cost of a crop for each feature.'),
+    'help_text': tr(
+        '"{name}" is defined as: {description}. In case where land cover data '
+        'is available, InaSAFE will calculate the production cost for each '
+        'land cover area (exposure feature). The production cost is '
+        'calculated based on the production cost rate multiplied by the area '
+        'of the land cover.').format(
+        name=concepts['production_cost']['name'],
+        description=concepts['production_cost']['description']
+    ),
+    'citations': [
+        {
+            'text': None,
+            'link': None
+        }
+    ],
+    # Null value can be replaced by default or not
+    'replace_null': False,
+}
+
+affected_production_cost_field = {
+    'key': 'affected_production_cost_field',
+    'name': tr('Affected Production Cost'),
+    'field_name': 'affected_production_cost',
+    'header_name': tr('Production Cost'),
+    'type': QVariant.Double,
+    'length': default_field_length,
+    'precision': default_field_precision,
+    'absolute': True,
+    'description': tr(
+        'The amount of production cost of a crop that is affected for each '
+        'feature.'),
+    'help_text': tr(
+        '"{affected_name}" is defined as: {affected_description}. This field '
+        'contains the production cost that is affected by the hazard.').format(
+        affected_name=concepts['affected']['name'],
+        affected_description=concepts['affected']['description']),
+    'citations': [
+        {
+            'text': None,
+            'link': None
+        }
+    ],
+    # Null value can be replaced by default or not
+    'replace_null': False,
+    'units': currencies,
+}
+
+# Production value field
+production_value_rate_field = {
+    'key': 'production_value_rate_field',
+    'name': tr('Production Value Rate'),
+    'field_name': 'production_value_rate',
+    'type': qvariant_numbers,
+    'length': default_field_length,
+    'precision': 0,
+    'absolute': True,
+    'description': tr(
+        'The rate of production value of a crop for each feature in '
+        'currency per hectare unit.'),
+    'help_text': tr(
+        '"{name}" is defined as: {description}. In case where land cover data '
+        'is available, InaSAFE will calculate the production value for each '
+        'land cover area (exposure feature). The production value is '
+        'calculated based on the production value rate multiplied by the area '
+        'of the land cover.').format(
+        name=concepts['production_value_rate']['name'],
+        description=concepts['production_value_rate']['description']
+    ),
+    'citations': [
+        {
+            'text': None,
+            'link': None
+        }
+    ],
+    # Null value can be replaced by default or not
+    'replace_null': False,
+}
+
+production_value_field = {
+    'key': 'production_value_field',
+    'name': tr('Production Value'),
+    'field_name': 'production_value',
+    'type': QVariant.Double,
+    'length': default_field_length,
+    'precision': default_field_precision,
+    'absolute': True,
+    'description': tr(
+        'The total production value of a crop for each feature.'),
+    'help_text': tr(
+        '"{name}" is defined as: {description}. In case where land cover data '
+        'is available, InaSAFE will calculate the production value for each '
+        'land cover area (exposure feature). The production value is '
+        'calculated based on the production value rate multiplied by the area '
+        'of the land cover.').format(
+        name=concepts['production_value']['name'],
+        description=concepts['production_value']['description']
+    ),
+    # Null value can be replaced by default or not
+    'replace_null': False,
+}
+
+affected_production_value_field = {
+    'key': 'affected_production_value_field',
+    'name': tr('Affected Production Value'),
+    'field_name': 'affected_production_value',
+    'header_name': tr('Production Value'),
+    'type': QVariant.Double,
+    'length': default_field_length,
+    'precision': default_field_precision,
+    'absolute': True,
+    'description': tr(
+        'The amount of production value of a crop that is affected for each '
+        'feature.'),
+    'help_text': tr(
+        '"{affected_name}" is defined as: {affected_description}. This field '
+        'contains the production value that is affected by the hazard.'
+    ).format(
+        affected_name=concepts['affected']['name'],
+        affected_description=concepts['affected']['description']),
+    'citations': [
+        {
+            'text': None,
+            'link': None
+        }
+    ],
+    # Null value can be replaced by default or not
+    'replace_null': False,
+    'units': currencies,
+}
+
+# # # # # # # # # #
+# Direction and Distance Field
+# # # # # # # # # #
+
+# Count for each exposure type
+distance_field = {
+    'key': 'distance_field',
+    'name': tr('Distance'),
+    'field_name': 'distance',
+    'header_name': tr('Distance'),
+    'type': QVariant.Double,
+    'length': default_field_length,
+    'precision': default_field_precision,
+    'absolute': True,
+    'description': tr(
+        'The distance value between place and hazard point.'
+    ),
+    'help_text': tr(
+        'Distance value between place feature to the epicenter of the hazard. '
+        'The distance is calculated using WGS84 as ellipsoid model. The unit '
+        'of the distance is in meter.'),
+    'citations': [
+        {
+            'text': None,
+            'link': None
+        }
+    ],
+    # Null value can be replaced by default or not
+    'replace_null': False
+}
+
+bearing_field = {
+    'key': 'bearing_field',
+    'name': tr('Bearing Angle'),
+    'field_name': 'bearing',
+    'header_name': tr('Bearing'),
+    'type': QVariant.Double,
+    'length': default_field_length,
+    'precision': default_field_precision,
+    'absolute': False,
+    'description': tr(
+        'An azimuth angle at a place to a hazard point.'),
+    'help_text': tr(
+        'A bearing angle is an angle measured to a point as observed in '
+        'current location using north as a reference direction. In this case, '
+        '"bearing from" refers to an angle calculated at a certain place '
+        'pointing to a hazard location. Positive values indicate it '
+        'calculates from north moving clockwise, and negative values '
+        'indicate it calculates from North moving counterclockwise.'),
+    'citations': [
+        {
+            'text': None,
+            'link': None
+        }
+    ]
+}
+
+direction_field = {
+    'key': 'direction_field',
+    'name': tr('Direction'),
+    'field_name': 'direction',
+    'header_name': tr('Direction'),
+    'type': QVariant.String,
+    'length': default_field_length,
+    'precision': 0,
+    'description': tr(
+        'Cardinality of a bearing angle.'),
+    'help_text': tr(
+        'Cardinality of a bearing angle is an information that indicates the '
+        'direction of the angle. The purpose of this information is so that '
+        'it will be easier to understand than using only a bearing angle.'),
+    'citations': [
+        {
+            'text': None,
+            'link': None
+        }
+    ]
+}
+
+place_mmi_field = {
+    'key': 'place_mmi_field',
+    'name': tr('Place MMI Value'),
+    'field_name': 'place_mmi',
+    'header_name': tr('Place MMI'),
+    'type': QVariant.Double,
+    'length': default_field_length,
+    'precision': default_field_precision,
+    'absolute': True,
+    'description': tr(
+        'A value attribute for MMI at a certain place.'),
+    'help_text': tr(
+        'If there is a place layer provided while converting the grid xml '
+        'file, then the MMI value at the location of the place will be added '
+        'to this field.'),
+    'citations': [
+        {
+            'text': None,
+            'link': None
+        }
+    ]
+}
+
 # Inputs
 exposure_fields = [
     exposure_id_field,
@@ -2237,14 +2674,47 @@ exposure_summary_table_fields = [
 ]
 
 analysis_fields = [
-    analysis_id_field,
     analysis_name_field,
     hazard_count_field,
     total_affected_field,
     total_not_affected_field,
     total_not_exposed_field,
+    total_exposed_field,
     total_field
 ]
+
+multiexposure_aggregation_fields = [
+    aggregation_id_field,
+    aggregation_name_field,
+    exposure_affected_exposure_type_count_field,
+    exposure_total_affected_field,
+]
+
+multiexposure_analysis_fields = [
+    analysis_name_field,
+    exposure_hazard_count_field,
+    exposure_total_affected_field,
+    exposure_total_not_affected_field,
+    exposure_total_exposed_field,
+    exposure_total_not_exposed_field,
+    exposure_total_field,
+]
+
+# Field that can be used to summarize / aggregate the result in exposure
+# summary table
+summarizer_fields = [
+    productivity_field,
+    production_cost_field,
+    production_value_field
+]
+
+# Mapping between summarizer field and its affected fields in the exposure
+# summary table
+affected_summarizer_fields = {
+    productivity_field['key']: affected_productivity_field,
+    production_cost_field['key']: affected_production_cost_field,
+    production_value_field['key']: affected_production_value_field,
+}
 
 # Add also minimum needs fields
 from safe.definitions.minimum_needs import minimum_needs_fields  # noqa
@@ -2256,7 +2726,8 @@ count_fields = [
     # Gender count fields
     female_count_field,
     child_bearing_age_count_field,
-    pregnant_lactating_count_field,
+    pregnant_count_field,
+    lactating_count_field,
     male_count_field,
     # Additional needs count fields
     hygiene_packs_count_field,
@@ -2275,7 +2746,8 @@ count_fields = [
     # Gender displaced count fields
     female_displaced_count_field,
     child_bearing_age_displaced_count_field,
-    pregnant_lactating_displaced_count_field,
+    pregnant_displaced_count_field,
+    lactating_displaced_count_field,
     male_displaced_count_field,
     # Age count fields
     infant_displaced_count_field,
@@ -2288,3 +2760,9 @@ count_fields = [
     over_60_displaced_count_field,
     disabled_displaced_count_field
 ] + minimum_needs_fields
+
+# And also additional minimum needs
+additional_minimum_needs = [
+    hygiene_packs_count_field,
+    additional_rice_count_field
+]

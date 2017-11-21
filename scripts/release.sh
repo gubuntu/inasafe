@@ -20,7 +20,7 @@ DIR='inasafe'
 
 OUT="/tmp/${DIR}.${VERSION}.zip"
 
-WORKDIR=/tmp/${DIR}$$
+WORKDIR=/tmp/${DIR}
 TARGZFILE="/tmp/${DIR}.tar.gz"
 
 mkdir -p ${WORKDIR}
@@ -67,8 +67,6 @@ find ${WORKDIR}/${DIR} -name test*.py -delete
 find ${WORKDIR}/${DIR} -name *_test.py -delete
 find ${WORKDIR}/${DIR} -name *.po -delete
 find ${WORKDIR}/${DIR} -name *.ts -delete
-
-rpl "from safe.test.utilities import HAZDATA, EXPDATA, TESTDATA, BOUNDDATA" "" ${WORKDIR}/${DIR}/safe/api.py
 
 rm -rf ${WORKDIR}/${DIR}/*.bat
 

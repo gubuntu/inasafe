@@ -11,35 +11,17 @@ Contact : ole.moller.nielsen@gmail.com
      (at your option) any later version.
 
 """
-import os
 import logging
+import os
 import time
-
 from shutil import copy
+
 from PyQt4 import QtCore
-from PyQt4.QtCore import QVariant, Qt
-from PyQt4.QtNetwork import QNetworkReply
-
-# noinspection PyUnresolvedReferences
-# pylint: disable=unused-import
-from qgis.core import (
-    QGis,  # force sip2 api
-    QgsRectangle,
-    QgsMapLayerRegistry,
-    QgsProject,
-    QgsVectorLayer,
-    QgsVectorFileWriter,
-    QgsField,
-    QgsExpression,
-    QgsFeature,
-    QgsExpressionContext,
-    QgsNetworkAccessManager)
-# pylint: enable=unused-import
-
 # noinspection PyPackageRequirements
 from PyQt4 import QtGui
 # noinspection PyPackageRequirements
 from PyQt4.QtCore import QSettings, pyqtSignature, QRegExp, pyqtSlot
+from PyQt4.QtCore import QVariant, Qt
 # noinspection PyPackageRequirements
 from PyQt4.QtGui import (
     QDialog,
@@ -48,6 +30,17 @@ from PyQt4.QtGui import (
     QFileDialog,
     QRegExpValidator,
     QButtonGroup)
+from PyQt4.QtNetwork import QNetworkReply
+# noinspection PyUnresolvedReferences
+# pylint: disable=unused-import
+from qgis.core import (
+    QGis,  # NOQA pylint: disable=unused-import
+    QgsMapLayerRegistry,
+    QgsVectorLayer,
+    QgsVectorFileWriter,
+    QgsField,
+    QgsExpression,
+    QgsExpressionContext)
 
 from safe.common.exceptions import (
     CanceledImportDialogError,
@@ -55,24 +48,25 @@ from safe.common.exceptions import (
 from safe.definitions.peta_bencana import development_api, production_api
 from safe.gui.tools.help.peta_bencana_help import peta_bencana_help
 from safe.utilities.file_downloader import FileDownloader
-from safe.utilities.resources import (
-    html_footer, html_header, get_ui_class, resources_path)
 from safe.utilities.qgis_utilities import (
     display_warning_message_box,
     display_warning_message_bar)
-from safe.utilities.settings import setting
 from safe.utilities.qt import disable_busy_cursor
+from safe.utilities.resources import (
+    html_footer, html_header, get_ui_class, resources_path)
+from safe.utilities.settings import setting
+
+# pylint: enable=unused-import
 
 
 LOGGER = logging.getLogger('InaSAFE')
 
 FORM_CLASS = get_ui_class('peta_bencana_dialog_base.ui')
 
-__author__ = 'tim@kartoza.com'
+__copyright__ = "Copyright 2015, The InaSAFE Project"
+__license__ = "GPL version 3"
+__email__ = "info@inasafe.org"
 __revision__ = '$Format:%H$'
-__date__ = '23/11/2015'
-__copyright__ = ('Copyright 2015, Australia Indonesia Facility for '
-                 'Disaster Reduction')
 
 
 class PetaBencanaDialog(QDialog, FORM_CLASS):
@@ -318,12 +312,14 @@ class PetaBencanaDialog(QDialog, FORM_CLASS):
         # as a string.
         # This is used for cartography
         flood_class_field = QgsField('floodclass', QVariant.Int)
-        layer.dataProvider().addAttributes([flood_class_field])
+        layer.addAttribute(flood_class_field)
         layer.commitChanges()
         layer.startEditing()
         flood_class_idx = layer.fieldNameIndex('floodclass')
         flood_class_expression = QgsExpression('to_int(state)')
-        flood_class_expression.prepare(layer.pendingFields())
+        context = QgsExpressionContext()
+        context.setFields(layer.pendingFields())
+        flood_class_expression.prepare(context)
 
         # Add field with boolean flag to say if the area is flooded
         # This is used by the impact function
@@ -333,10 +329,11 @@ class PetaBencanaDialog(QDialog, FORM_CLASS):
         layer.startEditing()
         flooded_idx = layer.fieldNameIndex('flooded')
         flood_flag_expression = QgsExpression('state > 0')
-        flood_flag_expression.prepare(layer.pendingFields())
+        flood_flag_expression.prepare(context)
         for feature in layer.getFeatures():
-            feature[flood_class_idx] = flood_class_expression.evaluate(feature)
-            feature[flooded_idx] = flood_flag_expression.evaluate(feature)
+            context.setFeature(feature)
+            feature[flood_class_idx] = flood_class_expression.evaluate(context)
+            feature[flooded_idx] = flood_flag_expression.evaluate(context)
             layer.updateFeature(feature)
         layer.commitChanges()
         return layer
@@ -549,16 +546,15 @@ class PetaBencanaDialog(QDialog, FORM_CLASS):
                     self.tr(
                         'Your current projection is different than EPSG:4326. '
                         'You should enable \'on the fly\' to display '
-                        'correctly your layers')
+                        'correctly your layers'
                     )
+                )
 
     def reject(self):
-        """Redefinition of the reject() method.
+        """Redefinition of the method.
 
         It will call the super method.
         """
-        # add our own logic here...
-
         super(PetaBencanaDialog, self).reject()
 
     def download(self, url, output_path):

@@ -1,34 +1,21 @@
 # coding=utf-8
-"""
-InaSAFE Disaster risk assessment tool by AusAid -**InaSAFE Wizard**
-
-This module provides: Keyword Wizard Step: InaSAFE Fields
-
-Contact : ole.moller.nielsen@gmail.com
-
-.. note:: This program is free software; you can redistribute it and/or modify
-     it under the terms of the GNU General Public License as published by
-     the Free Software Foundation; either version 2 of the License, or
-     (at your option) any later version.
-
-"""
+"""InaSAFE Wizard Step InaSAFE Fields."""
 
 # noinspection PyPackageRequirements
 import logging
-from PyQt4.QtGui import QWidget
 
-from safe_extras.parameters.select_parameter import SelectParameter
-from safe_extras.parameters.qt_widgets.parameter_container import (
-    ParameterContainer)
+from parameters.qt_widgets.parameter_container import ParameterContainer
+from parameters.select_parameter import SelectParameter
 
+from safe import messaging as m
+from safe.definitions.constants import no_field
+from safe.definitions.layer_geometry import layer_geometry_raster
 from safe.definitions.layer_purposes import (layer_purpose_aggregation)
 from safe.definitions.utilities import get_fields, get_compulsory_fields
-from safe.definitions.layer_geometry import layer_geometry_raster
-from safe.definitions.constants import no_field
-from safe.utilities.i18n import tr
-
 from safe.gui.tools.wizard.wizard_step import (
     WizardStep, get_wizard_step_ui_class)
+from safe.definitions.fields import population_count_field
+from safe.utilities.i18n import tr
 
 __copyright__ = "Copyright 2016, The InaSAFE Project"
 __license__ = "GPL version 3"
@@ -40,7 +27,8 @@ LOGGER = logging.getLogger('InaSAFE')
 
 
 class StepKwInaSAFEFields(WizardStep, FORM_CLASS):
-    """Keyword Wizard Step: InaSAFE Fields"""
+
+    """InaSAFE Wizard Step InaSAFE Fields."""
 
     def __init__(self, parent=None):
         """Constructor for the tab.
@@ -76,6 +64,11 @@ class StepKwInaSAFEFields(WizardStep, FORM_CLASS):
                 selected_subcategory()
         else:
             subcategory = {'key': None}
+
+        inasafe_fields = self.get_inasafe_fields()
+        # If population field is set, must go to field mapping step first.
+        if population_count_field['key'] in inasafe_fields.keys():
+            return self.parent.step_kw_fields_mapping
 
         # Check if it can go to inasafe default field step
         default_inasafe_fields = get_fields(
@@ -132,13 +125,11 @@ class StepKwInaSAFEFields(WizardStep, FORM_CLASS):
         if self.parameters:
             self.parameters = []
 
-        layer_data_provider = self.parent.layer.dataProvider()
-
         # Iterate through all inasafe fields
         for inasafe_field in self.inasafe_fields_for_the_layer():
             # Option for Not Available
             option_list = [no_field]
-            for field in layer_data_provider.fields():
+            for field in self.parent.layer.fields():
                 # Check the field type
                 if isinstance(inasafe_field['type'], list):
                     if field.type() in inasafe_field['type']:
@@ -205,3 +196,27 @@ class StepKwInaSAFEFields(WizardStep, FORM_CLASS):
             self.kwExtraKeywordsGridLayout.itemAt(i).widget().setParent(None)
         self.parameters = []
         self.parameter_container = ParameterContainer()
+
+    @property
+    def step_name(self):
+        """Get the human friendly name for the wizard step.
+
+        :returns: The name of the wizard step.
+        :rtype: str
+        """
+        return tr('InaSAFE Field Step')
+
+    def help_content(self):
+        """Return the content of help for this step wizard.
+
+            We only needs to re-implement this method in each wizard step.
+
+        :returns: A message object contains help.
+        :rtype: m.Message
+        """
+        message = m.Message()
+        message.add(m.Paragraph(tr(
+            'In this wizard step: {step_name}, you will be able to '
+            'set a field that corresponded with a InaSAFE field '
+            'concept.').format(step_name=self.step_name)))
+        return message

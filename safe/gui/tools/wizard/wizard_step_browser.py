@@ -16,14 +16,6 @@ from qgis.core import (
 import safe.definitions.layer_geometry
 import safe.definitions.layer_modes
 import safe.definitions.layer_purposes
-from safe.definitions.layer_purposes import (
-    layer_purpose_exposure, layer_purpose_aggregation, layer_purpose_hazard)
-from safe.definitions.layer_modes import (
-    layer_mode_continuous, layer_mode_classified)
-from safe.definitions.hazard_classifications import hazard_classification
-from safe.definitions.units import exposure_unit
-from safe.definitions.hazard import continuous_hazard_unit
-from safe.definitions.layer_geometry import layer_geometry_polygon
 from safe.common.exceptions import (
     HashNotFoundError,
     InaSAFEError,
@@ -32,12 +24,20 @@ from safe.common.exceptions import (
     MissingMetadata,
     NoKeywordsFoundError,
     UnsupportedProviderError)
+from safe.definitions.hazard import continuous_hazard_unit
+from safe.definitions.hazard_classifications import hazard_classification
+from safe.definitions.layer_geometry import layer_geometry_polygon
+from safe.definitions.layer_modes import (
+    layer_mode_continuous, layer_mode_classified)
+from safe.definitions.layer_purposes import (
+    layer_purpose_exposure, layer_purpose_aggregation, layer_purpose_hazard)
+from safe.definitions.units import exposure_unit
 from safe.gui.tools.wizard.layer_browser_proxy_model import (
     LayerBrowserProxyModel)
+from safe.gui.tools.wizard.utilities import layer_description_html
 from safe.gui.tools.wizard.wizard_step import WizardStep
 from safe.gui.tools.wizard.wizard_strings import (
     create_postGIS_connection_first)
-from safe.gui.tools.wizard.wizard_utils import layer_description_html
 from safe.utilities.gis import qgis_version
 from safe.utilities.utilities import is_keyword_version_supported
 
@@ -48,14 +48,14 @@ __revision__ = '$Format:%H$'
 
 
 class WizardStepBrowser(WizardStep):
-    """A base class for steps containing a QGIS Browser"""
+
+    """A base class for steps containing a QGIS Browser."""
 
     def __init__(self, parent=None):
         """Constructor for the tab.
 
         :param parent: parent - widget to use as parent (Wizad Dialog).
         :type parent: QWidget
-
         """
         WizardStep.__init__(self, parent)
         # Set model for browser
@@ -66,7 +66,7 @@ class WizardStepBrowser(WizardStep):
     def get_next_step(self):
         """Find the proper step when user clicks the Next button.
 
-           This method must be implemented in derived classes.
+        This method must be implemented in derived classes.
 
         :returns: The step to be switched to
         :rtype: WizardStep instance or None
@@ -77,7 +77,7 @@ class WizardStepBrowser(WizardStep):
     def set_widgets(self):
         """Set all widgets on the tab.
 
-           This method must be implemented in derived classes.
+        This method must be implemented in derived classes.
         """
         raise NotImplementedError("The current step class doesn't implement \
             the set_widgets method")
@@ -377,8 +377,7 @@ class WizardStepBrowser(WizardStep):
 
         try:
             keywords = self.keyword_io.read_keywords(layer)
-            if ('layer_purpose' not in keywords and
-                    'impact_summary' not in keywords):
+            if 'layer_purpose' not in keywords:
                 keywords = None
         except (HashNotFoundError,
                 OperationalError,

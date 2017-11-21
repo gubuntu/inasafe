@@ -1,8 +1,26 @@
 # coding=utf-8
 """Definitions relating to exposure in InaSAFE."""
 
-from safe.definitions.concepts import concepts
 from safe.definitions.caveats import caveat_incomplete_data
+from safe.definitions.concepts import concepts
+from safe.definitions.exposure_classifications import (
+    generic_place_classes,
+    generic_road_classes,
+    generic_structure_classes,
+    generic_landcover_classes,
+    badan_geologi_landcover_classes,
+    data_driven_classes)
+from safe.definitions.field_groups import population_field_groups
+from safe.definitions.fields import (
+    exposure_fields,
+    exposure_name_field,
+    population_count_field,
+    exposure_type_field,
+    productivity_rate_field,
+    production_cost_rate_field,
+    production_value_rate_field)
+from safe.definitions.layer_modes import (
+    layer_mode_continuous, layer_mode_classified)
 from safe.definitions.units import (
     count_exposure_unit,
     unit_metres,
@@ -10,20 +28,6 @@ from safe.definitions.units import (
     unit_hectares,
     unit_kilometres,
 )
-from safe.definitions.fields import (
-    exposure_fields,
-    exposure_name_field,
-    population_count_field,
-    exposure_type_field)
-from safe.definitions.field_groups import population_field_groups
-from safe.definitions.layer_modes import (
-    layer_mode_continuous, layer_mode_classified)
-from safe.definitions.exposure_classifications import (
-    generic_place_classes,
-    generic_road_classes,
-    generic_structure_classes,
-    generic_landcover_classes,
-    badan_geologi_landcover_classes)
 from safe.utilities.i18n import tr
 
 __copyright__ = "Copyright 2016, The InaSAFE Project"
@@ -46,8 +50,7 @@ exposure_population = {
                 caveat_incomplete_data,
                 tr('Exposed population varies by the time (day or night, '
                    'weekends, holidays etc.). Such variations are not '
-                   'included in the analysis.'
-                ),
+                   'included in the analysis.'),
                 tr('Numbers reported for population counts have been rounded '
                    'to the nearest 10 people if the total is less than 1,000; '
                    'nearest 100 people if more than 1,000 and less than '
@@ -236,7 +239,7 @@ exposure_road = {
     ],
     'size_unit': unit_metres,
     'units': [unit_metres, unit_kilometres],
-    'classifications': [generic_road_classes],
+    'classifications': [generic_road_classes, data_driven_classes],
     'compulsory_fields': [exposure_type_field],
     'fields': exposure_fields,
     'extra_fields': [
@@ -312,7 +315,7 @@ exposure_structure = {
     ],
     'size_unit': unit_square_metres,
     'units': [count_exposure_unit],
-    'classifications': [generic_structure_classes],
+    'classifications': [generic_structure_classes, data_driven_classes],
     'compulsory_fields': [exposure_type_field],
     'fields': exposure_fields,
     'extra_fields': [
@@ -323,7 +326,7 @@ exposure_structure = {
     'layer_modes': [layer_mode_classified],
     'display_not_exposed': True,
     'use_population_rounding': False,
-    'layer_legend_title': tr('Number of buildings'),
+    'layer_legend_title': tr('Number of structures'),
     'measure_question': tr('how many')
 }
 exposure_place = {
@@ -363,10 +366,10 @@ exposure_place = {
     ],
     'size_unit': None,  # It's a point layer.
     'units': [count_exposure_unit],
-    'classifications': [generic_place_classes],
+    'classifications': [generic_place_classes, data_driven_classes],
     'compulsory_fields': [exposure_type_field],
     'fields': exposure_fields,
-    'extra_fields': [exposure_name_field],
+    'extra_fields': [exposure_name_field, population_count_field],
     'field_groups': population_field_groups,
     'layer_modes': [layer_mode_classified],
     'display_not_exposed': True,
@@ -437,12 +440,18 @@ exposure_land_cover = {
     'size_unit': unit_hectares,
     'units': [unit_hectares],
     'classifications': [
-        generic_landcover_classes, badan_geologi_landcover_classes],
+        generic_landcover_classes,
+        badan_geologi_landcover_classes,
+        data_driven_classes
+    ],
     'compulsory_fields': [exposure_type_field],
     'fields': exposure_fields,
     'extra_fields': [
         # feature_value_field, disabled in V4.0, ET 13/02/17
         # feature_rate_field disabled in V4.0, ET 13/02/17
+        productivity_rate_field,
+        production_cost_rate_field,
+        production_value_rate_field
     ],
     'field_groups': [],
     'layer_modes': [layer_mode_classified],

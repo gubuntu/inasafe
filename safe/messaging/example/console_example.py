@@ -16,6 +16,8 @@ __date__ = '27/05/2013'
 __copyright__ = ('Copyright 2012, Australia Indonesia Facility for '
                  'Disaster Reduction')
 
+from pydispatch import dispatcher
+
 from safe.messaging import (
     Message,
     Paragraph,
@@ -23,15 +25,15 @@ from safe.messaging import (
     Text,
     ImportantText,
     EmphasizedText)
-from safe_extras.pydispatch import dispatcher
-
 
 DYNAMIC_MESSAGE_SIGNAL = 'ImpactFunctionMessage'
 STATIC_MESSAGE_SIGNAL = 'ApplicationMessage'
 
 
 class ConsoleView():
+
     """A simple console based message queue mockup."""
+
     def __init__(self):
         # Always gets replaced when a new message is passed
         self.static_message = None
@@ -41,14 +43,14 @@ class ConsoleView():
 
     def static_message_event(self, sender, message):
         """Static message event handler - set message state based on event."""
-        _ = sender  # we arent using it
+        _ = sender  # NOQA
         self.dynamic_messages = []
         self.static_message = message
         self.show_messages()
 
     def dynamic_message_event(self, sender, message):
         """Dynamic event handler - set message state based on event."""
-        _ = sender  # we arent using it
+        _ = sender  # NOQA
         self.dynamic_messages.append(message)
         self.show_messages()
 
@@ -64,7 +66,10 @@ class ConsoleView():
         print string
 
 
-class ImpactFunction1():
+class ImpactFunction1(object):
+
+    """Feedback progress for the impact function."""
+
     def __init__(self):
         message = Message(SuccessParagraph('IF1 was initialised'))
         dispatcher.send(
@@ -82,7 +87,10 @@ class ImpactFunction1():
             message=message)
 
 
-class App():
+class App(object):
+
+    """Class for messaging."""
+
     def __init__(self):
         self.message_queue = ConsoleView()
         # Set up dispatcher for dynamic messages
@@ -114,8 +122,9 @@ class App():
         impact_function1 = ImpactFunction1()
         # Run some tasks that will spawn dynamic messages
         for i in range(1, 10):
-            _ = i
+            _ = i  # NOQA
             impact_function1.run()
+
 
 if __name__ == '__main__':
     app = App()

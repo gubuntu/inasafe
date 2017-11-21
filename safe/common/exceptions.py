@@ -14,8 +14,8 @@ Contact : ole.moller.nielsen@gmail.com
 
 """
 
-from safe.utilities.unicode import get_unicode, get_string
 from safe.messaging.item.message_element import MessageElement
+from safe.utilities.unicode import get_unicode, get_string
 
 __author__ = 'tim@kartoza.com'
 __revision__ = '$Format:%H$'
@@ -25,7 +25,8 @@ __copyright__ = ('Copyright 2012, Australia Indonesia Facility for '
 
 
 class InaSAFEError(RuntimeError):
-    """Base class for all user defined exceptions"""
+
+    """Base class for all user defined exceptions."""
 
     suggestion = 'An unspecified error occurred.'
 
@@ -64,7 +65,7 @@ class InaSAFEError(RuntimeError):
 
 class ReadLayerError(InaSAFEError):
 
-    """When a layer can't be read"""
+    """When a layer can't be read."""
 
     suggestion = (
         'Check that the file exists and you have permissions to read it')
@@ -72,14 +73,14 @@ class ReadLayerError(InaSAFEError):
 
 class WriteLayerError(InaSAFEError):
 
-    """When a layer can't be written"""
+    """When a layer can't be written."""
 
     suggestion = 'Please ask the developers of InaSAFE to add a suggestion.'
 
 
 class BoundingBoxError(InaSAFEError):
 
-    """For errors relating to bboxes"""
+    """For errors relating to bboxes."""
 
     suggestion = 'Please ask the developers of InaSAFE to add a suggestion.'
 
@@ -93,28 +94,28 @@ class VerificationError(InaSAFEError):
 
 class PolygonInputError(InaSAFEError):
 
-    """For invalid inputs to numeric polygon functions"""
+    """For invalid inputs to numeric polygon functions."""
 
     suggestion = 'Please ask the developers of InaSAFE to add a suggestion.'
 
 
 class PointsInputError(InaSAFEError):
 
-    """For invalid inputs to numeric point functions"""
+    """For invalid inputs to numeric point functions."""
 
     suggestion = 'Please ask the developers of InaSAFE to add a suggestion.'
 
 
 class BoundsError(InaSAFEError):
 
-    """For points falling outside interpolation grid"""
+    """For points falling outside interpolation grid."""
 
     suggestion = 'Please ask the developers of InaSAFE to add a suggestion.'
 
 
 class GetDataError(InaSAFEError):
 
-    """When layer data cannot be obtained"""
+    """When layer data cannot be obtained."""
 
     suggestion = 'Please ask the developers of InaSAFE to add a suggestion.'
 
@@ -142,28 +143,28 @@ class GridXmlParseError(InaSAFEError):
 
 class ContourCreationError(InaSAFEError):
 
-    """An exception for when creating contours from shakemaps goes wrong"""
+    """An exception for when creating contours from shakemaps goes wrong."""
 
     suggestion = 'Please ask the developers of InaSAFE to add a suggestion.'
 
 
 class InvalidLayerError(InaSAFEError):
 
-    """Raised when a gis layer is invalid"""
+    """Raised when a gis layer is invalid."""
 
     suggestion = 'Please ask the developers of InaSAFE to add a suggestion.'
 
 
 class ZeroImpactException(InaSAFEError):
 
-    """Raised if an impact function return zero impact"""
+    """Raised if an impact function return zero impact."""
 
     suggestion = 'Please ask the developers of InaSAFE to add a suggestion.'
 
 
 class WrongDataTypeException(InaSAFEError):
 
-    """Raised if expected and received data types are different"""
+    """Raised if expected and received data types are different."""
 
     suggestion = 'Please ask the developers of InaSAFE to add a suggestion.'
 
@@ -234,16 +235,14 @@ class InvalidParameterError(InaSAFEError):
 
 class NoKeywordsFoundError(InaSAFEError):
 
-    """Custom exception for when no keywords file exist for a layer.
-    """
+    """Custom exception for when no keywords file exist for a layer."""
 
     pass
 
 
 class TranslationLoadError(InaSAFEError):
 
-    """Custom exception handler for whe translation file fails
-    to load."""
+    """Custom exception handler for whe translation file fails to load."""
 
     pass
 
@@ -257,8 +256,9 @@ class ComputationError(InaSAFEError):
 
 class NoFeaturesInExtentError(InaSAFEError):
 
-    """An exception that gets thrown when no features are within
-    the extent being clipped."""
+    """An exception that gets thrown when no features are within the extent
+    being clipped.
+    """
 
     pass
 
@@ -273,21 +273,22 @@ class InvalidProjectionError(InaSAFEError):
 class InsufficientOverlapError(InaSAFEError):
 
     """An exception raised if an error occurs during extent calculation
-    because the bounding boxes do not overlap."""
+    because the bounding boxes do not overlap.
+    """
 
     pass
 
 
 class StyleError(InaSAFEError):
 
-    """An exception relating to reading / generating GIS styles"""
+    """An exception relating to reading / generating GIS styles."""
 
     pass
 
 
 class MemoryLayerCreationError(InaSAFEError):
 
-    """Raised if an error occurs creating the cities file"""
+    """Raised if an error occurs creating the cities file."""
 
     pass
 
@@ -295,7 +296,8 @@ class MemoryLayerCreationError(InaSAFEError):
 class CallGDALError(InaSAFEError):
 
     """Raised if failed to call gdal command. Indicate by error message that is
-    not empty"""
+    not empty.
+    """
 
     pass
 
@@ -309,7 +311,7 @@ class FileMissingError(InaSAFEError):
 
 class CanceledImportDialogError(InaSAFEError):
 
-    """Raised if import process canceled"""
+    """Raised if import process canceled."""
 
     pass
 
@@ -372,7 +374,7 @@ class InvalidExtentError(InaSAFEError):
 
 class NoAttributeInLayerError(InaSAFEError):
 
-    """Raised if the attribute not exists in the vector layer"""
+    """Raised if the attribute not exists in the vector layer."""
 
     pass
 
@@ -388,7 +390,7 @@ class MetadataLayerConstraintError(InaSAFEError):
 
 class MetadataReadError(InaSAFEError):
 
-    """When a metadata xml is not correctly formatted can't be read"""
+    """When a metadata xml is not correctly formatted can't be read."""
 
     suggestion = (
         'Check that the file is correct')
@@ -396,21 +398,21 @@ class MetadataReadError(InaSAFEError):
 
 class MetadataInvalidPathError(InaSAFEError):
 
-    """When a path for a metadata xml is not correct"""
+    """When a path for a metadata xml is not correct."""
 
     suggestion = 'Check that the XML path of the property is correct'
 
 
 class MetadataCastError(InaSAFEError):
 
-    """When a path for a metadata xml is not correct"""
+    """When a path for a metadata xml is not correct."""
 
     suggestion = 'Check that the XML value is of the correct type'
 
 
 class InvalidProvenanceDataError(InaSAFEError):
 
-    """When a path for a metadata xml is not correct"""
+    """When a path for a metadata xml is not correct."""
 
     suggestion = 'Check that the IF produced all the required data'
 
@@ -424,7 +426,7 @@ class MissingMetadata(InaSAFEError):
 
 class MissingImpactReport(InaSAFEError):
 
-    """When Impact Report do not have proper input.."""
+    """When Impact Report do not have proper input."""
 
     pass
 
@@ -451,5 +453,14 @@ class ProcessingInstallationError(InaSAFEError):
 
 
 class AlignRastersError(Exception):
-    """Raised if alignment of hazard and exposure rasters failed"""
+
+    """Raised if alignment of hazard and exposure rasters failed."""
+
+    pass
+
+
+class MetadataConversionError(InaSAFEError):
+
+    """When failed to convert metadata."""
+
     pass

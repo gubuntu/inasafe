@@ -53,6 +53,7 @@ generic_structure_classes = {
                 'house',
                 'residence',
                 'residential',
+                'apartments',
             ],
             'osm_downloader': ['Residential'],
             'citations': [
@@ -95,6 +96,7 @@ generic_structure_classes = {
                 'clinic/doctor',
                 'dentist',
                 'doctor',
+                'doctors',
                 'health',
                 'hospital',
                 'pharmacy',
@@ -184,6 +186,7 @@ generic_structure_classes = {
             'string_defaults': [
                 'accommodation',
                 'atm',
+                'bank',
                 'cafe',
                 'clothes',
                 'commercial',
@@ -278,6 +281,7 @@ generic_structure_classes = {
                 'Any other structure frequently mapped.'),
             'string_defaults': [
                 'animal boarding',
+                'garage',
                 'lighthouse',
                 'other',
                 'utility',
@@ -729,8 +733,8 @@ badan_geologi_landcover_classes = {
         },
         {
             'key': 'water_supply',
-            'name': tr('Water Supply'),
-            'description': tr('Water Supply'),
+            'name': tr('Water'),
+            'description': tr('Water bodies'),
             'osm_downloader': [],
             'string_defaults': [
                 'Air Danau / Situ',
@@ -784,10 +788,28 @@ badan_geologi_landcover_classes = {
     ]
 }
 
+
+data_driven_classes = {
+    'key': 'data_driven_classes',
+    'name': tr('Generic Data-driven Classification'),
+    'description': tr(
+        'Classification based on the content of the exposure dataset.'
+    ),
+    'type': exposure_classification_type,
+    'citations': [
+        {
+            'text': None,
+            'link': None
+        }
+    ],
+    'classes': []
+}
+
 exposure_classifications = [
     generic_structure_classes,
     generic_road_classes,
     generic_place_classes,
     generic_landcover_classes,
-    badan_geologi_landcover_classes
+    badan_geologi_landcover_classes,
+    data_driven_classes
 ]

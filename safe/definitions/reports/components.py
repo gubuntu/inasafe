@@ -4,11 +4,26 @@
 """
 from __future__ import absolute_import
 
+from safe.definitions.concepts import concepts
 from safe.definitions.exposure import (
-    exposure_structure,
-    exposure_road,
-    exposure_land_cover,
-    exposure_population)
+    exposure_structure, exposure_road, exposure_land_cover)
+from safe.definitions.fields import (
+    affected_field,
+    total_affected_field,
+    total_not_affected_field,
+    total_not_exposed_field,
+    population_exposed_per_mmi_field,
+    population_displaced_per_mmi,
+    fatalities_per_mmi_field,
+    population_count_field,
+    displaced_field,
+    fatalities_field,
+    affected_productivity_field,
+    affected_production_cost_field,
+    affected_production_value_field,
+    exposure_total_affected_field,
+    exposure_total_not_affected_field,
+    exposure_total_not_exposed_field)
 from safe.definitions.reports import (
     jinja2_component_type,
     qgis_composer_component_type,
@@ -23,51 +38,34 @@ from safe.definitions.reports import (
     pdf_product_tag,
     template_product_tag,
     qpt_product_tag)
-
-from safe.common.utilities import safe_dir
-from safe.definitions.fields import (
-    affected_field,
-    total_affected_field,
-    total_not_affected_field,
-    total_not_exposed_field,
-    population_exposed_per_mmi_field,
-    population_displaced_per_mmi,
-    fatalities_per_mmi_field,
-    population_count_field,
-    displaced_field,
-    fatalities_field,
-    female_displaced_count_field,
-    youth_displaced_count_field,
-    adult_displaced_count_field,
-    elderly_displaced_count_field,
-    exposure_count_field)
 from safe.definitions.styles import charcoal_black
 from safe.report.extractors.action_notes import (
     action_checklist_extractor,
     notes_assumptions_extractor,
     action_checklist_report_extractor,
     action_checklist_report_pdf_extractor)
-from safe.report.extractors.aggregate_postprocessors import \
-    aggregation_postprocessors_extractor
-from safe.report.extractors.aggregate_result import \
-    aggregation_result_extractor
+from safe.report.extractors.aggregate_postprocessors import (
+    aggregation_postprocessors_extractor)
+from safe.report.extractors.aggregate_result import (
+    aggregation_result_extractor)
 from safe.report.extractors.analysis_detail import analysis_detail_extractor
-from safe.report.extractors.analysis_provenance_details import \
-    analysis_provenance_details_extractor, \
-    analysis_provenance_details_simplified_extractor, \
-    analysis_provenance_details_report_extractor, \
-    analysis_provenance_details_pdf_extractor
-from safe.report.extractors.analysis_question import \
-    analysis_question_extractor
+from safe.report.extractors.analysis_provenance_details import (
+    analysis_provenance_details_extractor,
+    analysis_provenance_details_simplified_extractor,
+    analysis_provenance_details_report_extractor,
+    analysis_provenance_details_pdf_extractor)
+from safe.report.extractors.analysis_question import (
+    analysis_question_extractor)
+from safe.report.extractors.composer import (
+    qgis_composer_extractor,
+    qgis_composer_infographic_extractor)
 from safe.report.extractors.general_report import general_report_extractor
-from safe.report.extractors.composer import qgis_composer_extractor
 from safe.report.extractors.impact_table import (
     impact_table_extractor,
     impact_table_pdf_extractor)
 from safe.report.extractors.infographics import (
-    population_infographic_extractor,
-    infographic_layout_extractor,
-    infographic_pdf_extractor)
+    population_chart_legend_extractor,
+    infographic_people_section_notes_extractor)
 from safe.report.extractors.minimum_needs import minimum_needs_extractor
 from safe.report.extractors.mmi_detail import mmi_detail_extractor
 from safe.report.extractors.population_chart import (
@@ -82,7 +80,7 @@ from safe.report.report_metadata import (
     Jinja2ComponentsMetadata,
     QgisComposerComponentsMetadata)
 from safe.utilities.i18n import tr
-from safe.utilities.resources import resource_url, resources_path
+from safe.utilities.resources import resources_path
 
 __copyright__ = "Copyright 2016, The InaSAFE Project"
 __license__ = "GPL version 3"
@@ -122,20 +120,24 @@ general_report_component = {
         'hazard_header': tr('Hazard Zone'),
         # Used to customize header.
         # See issue inasafe#3688: remove all 'total' words
+        'reported_fields_header': tr('Exposure status'),
         'reported_fields': [
             {
                 'header': affected_field['name'],
-                'field': total_affected_field
+                'field': total_affected_field,
+                'multi_exposure_field': exposure_total_affected_field
             },
             {
                 # specify it directly since there is no field for
                 # unaffected only.
                 'header': tr('Not Affected'),
-                'field': total_not_affected_field
+                'field': total_not_affected_field,
+                'multi_exposure_field': exposure_total_not_affected_field
             },
             {
                 'header': tr('Not Exposed'),
-                'field': total_not_exposed_field
+                'field': total_not_exposed_field,
+                'multi_exposure_field': exposure_total_not_exposed_field
             },
             {
                 'header': displaced_field['name'],
@@ -145,7 +147,18 @@ general_report_component = {
                 'header': fatalities_field['name'],
                 'field': fatalities_field
             }
-        ]
+        ],
+        'concept_notes': {
+            'population_concepts': [
+                concepts['exposed_people'],
+                concepts['affected_people'],
+                concepts['displaced_people']
+            ],
+            'general_concepts': [
+                concepts['affected']
+            ],
+            'note_format': u'{name}: {description}'
+        }
     }
 }
 
@@ -223,10 +236,17 @@ analysis_detail_component = {
         'breakdown_header_class_format': tr('{exposure} class'),
         'header': tr('Analysis Detail'),
         'table_header_format': tr(
-            'Estimated {title} {unit} by {exposure} type'),
-        'notes': tr(
-            'Columns and rows containing only 0 or "No data" values are '
-            'excluded from the tables.')
+            'Estimated {title} {unit} affected by {exposure} type'),
+        'notes': [],
+        'extra_table_header_format': tr(
+            'Estimated loss by affected {exposure} type'),
+        'exposure_extra_fields': {
+            exposure_land_cover['key']: [
+                affected_productivity_field,
+                affected_production_cost_field,
+                affected_production_value_field,
+            ],
+        },
     }
 }
 
@@ -257,10 +277,17 @@ notes_assumptions_component = {
                 'action-note-categorized.html',
     'extra_args': {
         'header': tr('Notes and assumptions'),
+        'analysis_notes': {
+            'item_header': tr('analysis notes'),
+            'item_list': [
+                tr('Columns and rows containing only 0 or "No data" values '
+                   'are excluded from the tables.')
+            ]
+        },
         'affected_note_format': {
             'item_header': tr('affected notes'),
             'item_list': [
-                tr('Exposures in this following hazard classes are considered '
+                tr('Exposures in the following hazard classes are considered '
                    'affected: {hazard_classes}')
             ]
         },
@@ -272,7 +299,16 @@ notes_assumptions_component = {
             ]
         },
         'hazard_displacement_rates_note_format': tr(
-            '{name} - {displacement_rate:.2%}')
+            '{name} - {displacement_rate:.0%}'),
+        'fatality_rates_note_format': {
+            'item_header': tr('fatality rates notes'),
+            'item_list': [
+                tr('For this analysis, the following fatality rates were '
+                   'used: {rate_description}')
+            ]
+        },
+        'hazard_fatality_rates_note_format': tr(
+            '{name} - {fatality_rate}%')
     }
 }
 
@@ -290,6 +326,8 @@ minimum_needs_component = {
         'header': tr('Minimum needs'),
         'header_frequency_format': tr(
             'Relief items to be provided {frequency}'),
+        'header_additional_needs_format': tr(
+            'Additional items to be provided {frequency}'),
         'total_header': tr('Total'),
         'need_header_format': tr('{name} [{unit_abbreviation}]'),
         'zero_displaced_message': tr(
@@ -309,11 +347,9 @@ aggregation_result_component = {
                 'aggregation-result.html',
     'extra_args': {
         'header': tr('Aggregation Result'),
-        'notes': tr(
-            'Columns and rows containing only 0 or "No data" values are '
-            'excluded from the tables.'),
+        'notes': [],
         'table_header_format': tr(
-            'Estimated {title} {unit} by aggregation area'),
+            'Estimated {title} {unit} affected by aggregation area'),
         'aggregation_area_default_header': tr('Aggregation area'),
         'total_header': tr('Total'),
         'total_in_aggregation_header': tr('Total'),
@@ -333,37 +369,32 @@ aggregation_postprocessors_component = {
     'extra_args': {
         'header': tr('Detailed demographic breakdown'),
         'sections': {
-            'age': {
-                'header': tr('Detailed Age Report')
-            },
-            'gender': {
-                'header': tr('Detailed Gender Report')
-            },
-            'vulnerability': {
-                'header': tr('Detailed Vulnerability Report')
-            },
             'minimum_needs': {
-                'header': tr('Detailed Minimum Needs Report')
+                'header': tr('Estimated number of minimum needs per week')
             }
         },
         'defaults': {
             'aggregation_header': tr('Aggregation area'),
             'total_population_header': tr('Total Displaced Population'),
             'total_header': tr('Total'),
-            'notes': tr(
-                'Columns and rows containing only 0 or "No data" values are '
-                'excluded from the tables.'),
+            'notes': [],
+            'section_header_format': tr(
+                'Estimated number of people displaced by {header_name} '
+                'per aggregation area'),
+            'section_header_format_no_aggregation': tr(
+                'Estimated number of people displaced by {header_name} '),
+            'group_header_format': tr('{header_name} breakdown'),
             'zero_displaced_message': tr(
                 'Analysis produced 0 displaced count. '
                 'No calculations produced.'),
             'no_gender_rate_message': tr(
-                'Gender ratio not found. '
+                'Gender ratio is not found. '
                 'No calculations produced.'),
             'no_age_rate_message': tr(
-                'Age ratio not found. '
+                'Age ratio is not found. '
                 'No calculations produced.'),
             'no_vulnerability_rate_message': tr(
-                'Vulnerability ratio not exists. '
+                'Vulnerability ratio is not found. '
                 'No calculations produced.')
         }
     }
@@ -446,7 +477,7 @@ population_chart_svg_component = {
     'tags': [svg_product_tag],
     'extra_args': {
         'chart_title': tr('Estimated total population'),
-        'total_header': tr('Population')
+        'total_header': tr('Affected')
     }
 }
 
@@ -465,109 +496,75 @@ population_chart_png_component = {
     }
 }
 
-population_infographic_component = {
+population_chart_legend_component = {
     # This component depends on population_chart_png_component
-    'key': 'population-infographic',
+    'key': 'population-chart-legend',
     'type': jinja2_component_type,
     'processor': jinja2_renderer,
-    'extractor': population_infographic_extractor,
+    'extractor': population_chart_legend_extractor,
     'output_format': Jinja2ComponentsMetadata.OutputFormat.String,
-    'output_path': 'population-infographic-output.html',
+    'output_path': 'population-chart-legend-output.html',
     'template': 'standard-template/'
                 'jinja2/'
-                'population-infographic.html',
+                'population-chart-legend.html',
+}
+
+infographic_people_section_notes_component = {
+    'key': 'infographic-people-section-notes',
+    'type': jinja2_component_type,
+    'processor': jinja2_renderer,
+    'extractor': infographic_people_section_notes_extractor,
+    'output_format': Jinja2ComponentsMetadata.OutputFormat.String,
+    'output_path': 'infographic-people-section-notes-output.html',
+    'template': 'standard-template/'
+                'jinja2/'
+                'infographic-people-section-notes.html',
     'extra_args': {
-        # definitions for texts
-        'sections': {
-            'people': {
-                'header': tr('People'),
-                'items': [
-                    {
-                        'sub_header': {
-                            total_affected_field['key']: tr('Affected'),
-                            population_count_field['key']: tr('Population'),
-                            exposure_count_field['key'] % (
-                                exposure_population['key'], ): tr(
-                                'Population')
-                        }
-                    },
-                    {
-                        'sub_header': tr('Displaced<sup>*</sup>'),
-                        'sub_header_note_format': tr(
-                            '<sup>*</sup> Displacement rate: '
-                            '{rate_description}'),
-                        'rate_description_format': tr(
-                            '{displacement_rate:.2%} of affected {name}')
-                    },
-                ]
-            },
-            'vulnerability': {
-                'header': tr('Vulnerability'),
-                'sub_header_format': tr('from {number_displaced} displaced'),
-                'items': [
-                    {
-                        'sub_group_header': tr('Gender group'),
-                        # used to specify group column width in css
-                        'bootstrap_column': 'col-xs-3',
-                        # used to specify each element column in css
-                        'element_column': 'col-xs-12',
-                        'fields': [
-                            female_displaced_count_field,
-                        ],
-                        'headers': [
-                            tr('Female'),
-                        ]
-                    },
-                    {
-                        'sub_group_header': tr('Age group'),
-                        # used to specify group column width in css
-                        'bootstrap_column': 'col-xs-9',
-                        # used to specify each element column in css
-                        'element_column': 'col-xs-4',
-                        'fields': [
-                            youth_displaced_count_field,
-                            adult_displaced_count_field,
-                            elderly_displaced_count_field
-                        ],
-                        'headers': [
-                            tr('Youth'),
-                            tr('Adult'),
-                            tr('Elderly')
-                        ]
-                    }
-                ]
-            },
-            'minimum_needs': {
-                'header': tr('Minimum needs'),
-                'empty_unit_string': tr('units')
-            }
-        },
-        # definitions for icons
-        'icons': {
-            'total_affected_field': resource_url(resources_path(
-                'img/definitions/people.svg')),
-            'displaced_field': resource_url(resources_path(
-                'img/definitions/displaced.svg')),
-            'female_displaced_count_field': resource_url(resources_path(
-                'img/definitions/female.svg')),
-            'youth_displaced_count_field': resource_url(resources_path(
-                'img/definitions/youth.svg')),
-            'adult_displaced_count_field': resource_url(resources_path(
-                'img/definitions/adult.svg')),
-            'elderly_displaced_count_field': resource_url(resources_path(
-                'img/definitions/elderly.svg')),
-            'minimum_needs__rice_count_field': resource_url(resources_path(
-                'img/definitions/rice.svg')),
-            'minimum_needs__toilets_count_field': resource_url(resources_path(
-                'img/definitions/toilets.svg')),
-            'minimum_needs__drinking_water_count_field': resource_url(
-                resources_path('img/definitions/drinking_water.svg')),
-            'minimum_needs__clean_water_count_field': resource_url(
-                resources_path('img/definitions/clean_water.svg')),
-            'minimum_needs__family_kits_count_field': resource_url(
-                resources_path('img/definitions/family_kits.svg')),
-        }
+        'extra_note': tr(
+            'In this analysis, people are considered to be affected if they '
+            'are exposed to the hazard, and considered to be displaced if '
+            'they exposed to high or medium hazard.'),
+        'hazard_displacement_rates_note_format': tr(
+            '{displacement_rate:.0%} affected in {name} {classification_unit}')
     }
+}
+
+population_infographic_component = {
+    # This component depends on population_chart_png_component,
+    # population_chart_legend_component, and
+    # infographic_people_section_notes_component
+    'key': 'population-infographic',
+    'type': qgis_composer_component_type,
+    'processor': qgis_composer_renderer,
+    'extractor': qgis_composer_infographic_extractor,
+    'output_format': {
+        'map': QgisComposerComponentsMetadata.OutputFormat.PDF,
+        'template': QgisComposerComponentsMetadata.OutputFormat.QPT
+    },
+    'output_path': {
+        'map': 'infographic.pdf',
+        'template': 'infographic.qpt'
+    },
+    'orientation': 'landscape',
+    'page_dpi': 300,
+    'page_width': 297,
+    'page_height': 210,
+    'template': '../qgis-composer-templates/'
+                'infographic.qpt',
+    'tags': [
+        final_product_tag,
+        infographic_product_tag,
+        template_product_tag,
+        pdf_product_tag,
+        qpt_product_tag
+    ],
+    'extra_args': {
+        'components': {
+            'population-chart-legend': population_chart_legend_component,
+            'infographic-people-section-notes': (
+                infographic_people_section_notes_component)
+        }
+    },
 }
 
 # Default impact report component for reusability
@@ -589,38 +586,8 @@ impact_report_component_metadata = [
 standard_impact_report_metadata_html = {
     'key': 'analysis-result-html',
     'name': 'analysis-result-html',
-    'template_folder': safe_dir(sub_dir='../resources/report-templates/'),
+    'template_folder': resources_path('report-templates'),
     'components': impact_report_component_metadata + [
-        population_chart_svg_component,
-        population_chart_png_component,
-        population_infographic_component,
-        # TODO: Make a beautiful infographic using qpt template
-        # We need to disable infographic for now :(
-        # Infographic Layout HTML
-        # {
-        #     'key': 'infographic-layout',
-        #     'type': jinja2_component_type,
-        #     'processor': jinja2_renderer,
-        #     'extractor': infographic_layout_extractor,
-        #     'output_format': Jinja2ComponentsMetadata.OutputFormat.File,
-        #     'output_path': 'infographic.html',
-        #     'extra_args': {
-        #         'infographics': [population_infographic_component['key']],
-        #         'footer_format': tr(
-        #             'InaSAFE {version} | {analysis_date} | {analysis_time} |'
-        #             'info@inasafe.org | Icons source: OCHA | '
-        #             'Indonesian Government-'
-        #             'Australian Government-World Bank-GFDRR')
-        #     },
-        #     'template': 'standard-template/'
-        #                 'jinja2/'
-        #                 'infographic-layout.html',
-        #     'tags': [
-        #         final_product_tag,
-        #         infographic_product_tag,
-        #         html_product_tag
-        #     ]
-        # },
         {
             'key': 'impact-report',
             'type': jinja2_component_type,
@@ -629,9 +596,8 @@ standard_impact_report_metadata_html = {
             'output_format': Jinja2ComponentsMetadata.OutputFormat.File,
             'output_path': 'impact-report-output.html',
             'resources': [
-                safe_dir(sub_dir='../resources/css'),
-                safe_dir(sub_dir='../resources/js'),
-                safe_dir(sub_dir='../resources/img')],
+                resources_path('css'),
+                resources_path('js')],
             'template': 'standard-template/'
                         'jinja2/'
                         'impact-report-layout.html',
@@ -674,6 +640,7 @@ standard_impact_report_metadata_html = {
             ],
             'extra_args': {
                 'components_list': {
+                    'analysis_question': analysis_question_component,
                     'action_checklist': action_checklist_component,
                     'analysis_provenance_details': (
                         analysis_provenance_details_simplified_component)
@@ -710,7 +677,7 @@ standard_impact_report_metadata_html = {
 standard_impact_report_metadata_pdf = {
     'key': 'analysis-result-pdf',
     'name': 'analysis-result-pdf',
-    'template_folder': safe_dir(sub_dir='../resources/report-templates/'),
+    'template_folder': resources_path('report-templates'),
     'components': standard_impact_report_metadata_html['components'] + [
         # Impact Report PDF
         {
@@ -724,7 +691,10 @@ standard_impact_report_metadata_pdf = {
                 final_product_tag,
                 table_product_tag,
                 pdf_product_tag
-            ]
+            ],
+            'extra_args': {
+                'html_report_component_key': 'impact-report'
+            }
         },
         # Action Checklist Report PDF
         {
@@ -754,35 +724,79 @@ standard_impact_report_metadata_pdf = {
                 pdf_product_tag
             ]
         },
-        # TODO: Make a beautiful infographic using qpt template
-        # We need to disable infographic for now :(
-        # Infographic Layout PDF
-        # {
-        #     'key': 'infographic-pdf',
-        #     'type': qgis_composer_component_type,
-        #     'processor': qgis_composer_html_renderer,
-        #     'extractor': infographic_pdf_extractor,
-        #     'output_format': {
-        #         'doc': QgisComposerComponentsMetadata.OutputFormat.PDF,
-        #         'template': QgisComposerComponentsMetadata.OutputFormat.QPT
-        #     },
-        #     'output_path': {
-        #         'doc': 'infographic.pdf',
-        #         'template': 'infographic.qpt'
-        #     },
-        #     'page_dpi': 300,
-        #     'page_width': 297,
-        #     'page_height': 210,
-        #     'tags': [
-        #         # untag this from final product until donut png were
-        #         # rendered correctly by qgis
-        #         final_product_tag,
-        #         infographic_product_tag,
-        #         pdf_product_tag,
-        #         qpt_product_tag
-        #     ]
-        # }
     ]
+}
+
+# Default multi exposure report components
+multi_exposure_impact_report_component_metadata = [
+    analysis_question_component,
+    general_report_component
+]
+
+# Standard HTML output for multi exposure impact report
+standard_multi_exposure_impact_report_metadata_html = {
+    'key': 'multi-exposure-analysis-result-html',
+    'name': 'multi-exposure-analysis-result-html',
+    'template_folder': resources_path('report-templates'),
+    'components': multi_exposure_impact_report_component_metadata + [
+        {
+            'key': 'multi-exposure-impact-report',
+            'type': jinja2_component_type,
+            'processor': jinja2_renderer,
+            'extractor': impact_table_extractor,
+            'output_format': Jinja2ComponentsMetadata.OutputFormat.File,
+            'output_path': 'multi-exposure-impact-report-output.html',
+            'resources': [
+                resources_path('css'),
+                resources_path('js')],
+            'template': 'standard-template/'
+                        'jinja2/'
+                        'multi-exposure-impact-report-layout.html',
+            'tags': [
+                final_product_tag,
+                table_product_tag,
+                html_product_tag
+            ],
+            'extra_args': {
+                'components_list': {
+                    'analysis_question': analysis_question_component,
+                    'general_report': general_report_component,
+                }
+            }
+        },
+    ]
+}
+
+# Standard PDF Output for impact report
+standard_multi_exposure_impact_report_metadata_pdf = {
+    'key': 'multi-exposure-analysis-result-pdf',
+    'name': 'multi-exposure-analysis-result-pdf',
+    'template_folder': resources_path('report-templates'),
+    'components': (
+        standard_multi_exposure_impact_report_metadata_html['components'] + (
+            [
+                # Impact Report PDF
+                {
+                    'key': 'multi-exposure-impact-report-pdf',
+                    'type': qgis_composer_component_type,
+                    'processor': qgis_composer_html_renderer,
+                    'extractor': impact_table_pdf_extractor,
+                    'output_format': (
+                        QgisComposerComponentsMetadata.OutputFormat.PDF),
+                    'output_path': 'multi-exposure-impact-report-output.pdf',
+                    'tags': [
+                        final_product_tag,
+                        table_product_tag,
+                        pdf_product_tag
+                    ],
+                    'extra_args': {
+                        'html_report_component_key': (
+                            'multi-exposure-impact-report')
+                    }
+                },
+            ]
+        )
+    )
 }
 
 map_report_extra_args = {
@@ -812,13 +826,13 @@ map_report_extra_args = {
         'Geographic Coordinates - {crs}')
 }
 
-report_a4_blue = {
-    'key': 'a4-blue',
-    'name': 'a4-blue',
-    'template_folder': safe_dir(sub_dir='../resources/report-templates/'),
+map_report = {
+    'key': 'inasafe-map-report',
+    'name': 'inasafe-map-report',
+    'template_folder': resources_path('report-templates'),
     'components': [
         {
-            'key': 'a4-portrait-blue',
+            'key': 'inasafe-map-report-portrait',
             'type': qgis_composer_component_type,
             'processor': qgis_composer_renderer,
             'extractor': qgis_composer_extractor,
@@ -827,7 +841,7 @@ report_a4_blue = {
                 'template': QgisComposerComponentsMetadata.OutputFormat.QPT
             },
             'template': '../qgis-composer-templates/'
-                        'a4-portrait-blue.qpt',
+                        'inasafe-map-report-portrait.qpt',
             'tags': [
                 final_product_tag,
                 map_product_tag,
@@ -836,13 +850,13 @@ report_a4_blue = {
                 qpt_product_tag
             ],
             'output_path': {
-                'map': 'a4-portrait-blue.pdf',
-                'template': 'a4-portrait-blue.qpt'
+                'map': 'inasafe-map-report-portrait.pdf',
+                'template': 'inasafe-map-report-portrait.qpt'
             },
             'extra_args': map_report_extra_args
         },
         {
-            'key': 'a4-landscape-blue',
+            'key': 'inasafe-map-report-landscape',
             'type': qgis_composer_component_type,
             'processor': qgis_composer_renderer,
             'extractor': qgis_composer_extractor,
@@ -851,7 +865,7 @@ report_a4_blue = {
                 'template': QgisComposerComponentsMetadata.OutputFormat.QPT
             },
             'template': '../qgis-composer-templates/'
-                        'a4-landscape-blue.qpt',
+                        'inasafe-map-report-landscape.qpt',
             'tags': [
                 final_product_tag,
                 map_product_tag,
@@ -860,8 +874,8 @@ report_a4_blue = {
                 qpt_product_tag
             ],
             'output_path': {
-                'map': 'a4-landscape-blue.pdf',
-                'template': 'a4-landscape-blue.qpt'
+                'map': 'inasafe-map-report-landscape.pdf',
+                'template': 'inasafe-map-report-landscape.qpt'
             },
             'orientation': 'landscape',
             'page_dpi': 300,
@@ -871,3 +885,48 @@ report_a4_blue = {
         }
     ]
 }
+
+map_report_component_boilerplate = {
+    'key': 'boilerplate',  # should be updated if this component is used
+    'type': qgis_composer_component_type,
+    'processor': qgis_composer_renderer,
+    'extractor': qgis_composer_extractor,
+    'output_format': {
+        'map': QgisComposerComponentsMetadata.OutputFormat.PDF,
+        'template': QgisComposerComponentsMetadata.OutputFormat.QPT
+    },
+    'template': 'boilerplate.qpt',  # should be updated
+    'tags': [
+        final_product_tag,
+        map_product_tag,
+        template_product_tag,
+        pdf_product_tag,
+        qpt_product_tag
+    ],
+    'output_path': {
+        'map': 'boilerplate.pdf',  # should be updated
+        'template': 'boilerplate.qpt'  # should be updated
+    },
+    # we set the orientation is landscape by default
+    'orientation': 'landscape',
+    'page_dpi': 300,
+    'page_width': 297,
+    'page_height': 210,
+    'extra_args': map_report_extra_args
+}
+
+infographic_report = {
+    'key': 'infographic_report',
+    'name': 'infographic_report',
+    'template_folder': resources_path('report-templates'),
+    'components': [
+        population_chart_svg_component,
+        population_chart_png_component,
+        population_chart_legend_component,
+        infographic_people_section_notes_component,
+        population_infographic_component
+    ]
+}
+
+all_default_report_components = [
+    standard_impact_report_metadata_pdf, map_report, infographic_report]

@@ -1,27 +1,36 @@
 # coding=utf-8
-"""InaSAFE Keyword Wizard Field Step."""
+"""InaSAFE Wizard Step Field."""
 
-import re
 import logging
+import re
+from copy import deepcopy
 
-from PyQt4 import QtCore
+from PyQt4.QtCore import QVariant, Qt
 from PyQt4.QtGui import QListWidgetItem, QAbstractItemView
 
-from safe.utilities.i18n import tr
+from safe import messaging as m
+from safe.definitions.fields import population_count_field
+from safe.definitions.layer_modes import layer_mode_continuous
 from safe.definitions.layer_purposes import (
     layer_purpose_aggregation, layer_purpose_hazard, layer_purpose_exposure)
-from safe.definitions.layer_modes import layer_mode_continuous
+from safe.definitions.utilities import (
+    get_fields,
+    get_non_compulsory_fields,
+    get_field_groups,
+    definition,
+    get_compulsory_fields,
+)
+from safe.gui.tools.wizard.utilities import (
+    get_question_text, skip_inasafe_field)
 from safe.gui.tools.wizard.wizard_step import (
     WizardStep, get_wizard_step_ui_class)
 from safe.gui.tools.wizard.wizard_strings import (
     field_question_subcategory_unit,
     field_question_subcategory_classified,
     field_question_aggregation)
-from safe.gui.tools.wizard.wizard_utils import (
-    get_question_text, skip_inasafe_field)
-from safe.definitions.utilities import (
-    get_fields, get_non_compulsory_fields, get_field_groups)
-from safe.definitions.fields import population_count_field
+from safe.utilities.i18n import tr
+
+LOGGER = logging.getLogger('InaSAFE')
 
 __copyright__ = "Copyright 2016, The InaSAFE Project"
 __license__ = "GPL version 3"
@@ -29,7 +38,6 @@ __email__ = "info@inasafe.org"
 __revision__ = '$Format:%H$'
 
 FORM_CLASS = get_wizard_step_ui_class(__file__)
-LOGGER = logging.getLogger('InaSAFE')
 
 # Mode
 SINGLE_MODE = 'single'
@@ -38,7 +46,7 @@ MULTI_MODE = 'multi'
 
 class StepKwField(WizardStep, FORM_CLASS):
 
-    """InaSAFE Keyword Wizard Field Step."""
+    """InaSAFE Wizard Step Field."""
 
     def __init__(self, parent=None):
         """Constructor for the tab.
@@ -76,7 +84,15 @@ class StepKwField(WizardStep, FORM_CLASS):
         # Has layer groups, go to field mapping
         field_groups = get_field_groups(
             layer_purpose['key'], subcategory['key'])
-        if field_groups:
+        compulsory_field = get_compulsory_fields(
+            layer_purpose['key'], subcategory['key'])
+
+        # It's aggregation and has field_groups.
+        if field_groups and layer_purpose == layer_purpose_aggregation:
+            return self.parent.step_kw_fields_mapping
+
+        # It has field_groups and the compulsory field is population count.
+        if field_groups and compulsory_field == population_count_field:
             return self.parent.step_kw_fields_mapping
 
         # Has classifications, go to multi classifications
@@ -113,6 +129,7 @@ class StepKwField(WizardStep, FORM_CLASS):
         """
         self.clear_further_steps()
         field_names = self.selected_fields()
+        layer_purpose = self.parent.step_kw_purpose.selected_purpose()
         # Exit if no selection
         if not field_names:
             self.parent.pbnNext.setEnabled(False)
@@ -123,8 +140,9 @@ class StepKwField(WizardStep, FORM_CLASS):
         if not isinstance(field_names, list):
             field_names = [field_names]
         field_descriptions = ''
+        feature_count = self.parent.layer.featureCount()
         for field_name in field_names:
-            layer_fields = self.parent.layer.dataProvider().fields()
+            layer_fields = self.parent.layer.fields()
             field_index = layer_fields.indexFromName(field_name)
             # Exit if the selected field_names comes from a previous wizard run
             if field_index < 0:
@@ -133,16 +151,28 @@ class StepKwField(WizardStep, FORM_CLASS):
             # Generate description for the field.
             field_type = layer_fields.field(field_name).typeName()
             field_index = layer_fields.indexFromName(field_name)
-            unique_values = self.parent.layer.uniqueValues(field_index)[0:48]
+            unique_values = self.parent.layer.uniqueValues(field_index)
             unique_values_str = [
                 i is not None and unicode(i) or 'NULL'
-                for i in unique_values]
+                for i in unique_values[0:48]]
             unique_values_str = ', '.join(unique_values_str)
             field_descriptions += tr('<b>Field name</b>: {field_name}').format(
                 field_name=field_name)
             field_descriptions += tr(
                 '<br><b>Field type</b>: {field_type}').format(
                 field_type=field_type)
+            if (feature_count != -1 and (
+                    layer_purpose == layer_purpose_aggregation)):
+                if len(unique_values) == feature_count:
+                    unique = tr('Yes')
+                else:
+                    unique = tr('No')
+                field_descriptions += tr(
+                    '<br><b>Unique</b>: {unique} ({unique_values_count} '
+                    'unique values from {feature_count} features)'.format(
+                        unique=unique,
+                        unique_values_count=len(unique_values),
+                        feature_count=feature_count))
             field_descriptions += tr(
                 '<br><b>Unique values</b>: {unique_values_str}<br><br>'
             ).format(unique_values_str=unique_values_str)
@@ -175,20 +205,30 @@ class StepKwField(WizardStep, FORM_CLASS):
         purpose = self.parent.step_kw_purpose.selected_purpose()
         subcategory = self.parent.step_kw_subcategory.selected_subcategory()
         unit = self.parent.step_kw_unit.selected_unit()
+        layer_mode = self.parent.step_kw_layermode.selected_layermode()
 
         # Set mode
         # Notes(IS) I hard coded this one, need to fix it after it's working.
-        LOGGER.debug(self.parent.field_keyword_for_the_layer())
-        if (self.parent.field_keyword_for_the_layer() ==
-                population_count_field['key']):
+        field_key = self.parent.field_keyword_for_the_layer()
+        if field_key == population_count_field['key']:
             self.mode = MULTI_MODE
         else:
             self.mode = SINGLE_MODE
 
+        # Filtering based on field type
+        layer_field = definition(field_key)
+        layer_field_types = deepcopy(layer_field['type'])
+        if not isinstance(layer_field_types, list):
+            layer_field_types = [layer_field_types]
+
+        # Remove string for continuous layer
+        if layer_mode == layer_mode_continuous and unit:
+            if QVariant.String in layer_field_types:
+                layer_field_types.remove(QVariant.String)
+
         if purpose == layer_purpose_aggregation:
             question_text = field_question_aggregation
-        elif self.parent.step_kw_layermode.\
-                selected_layermode() == layer_mode_continuous and unit:
+        elif layer_mode == layer_mode_continuous and unit:
             subcategory_unit_relation = get_question_text(
                 '%s_%s_question' % (subcategory['key'], unit['key']))
             if 'MISSING' in subcategory_unit_relation:
@@ -217,10 +257,13 @@ class StepKwField(WizardStep, FORM_CLASS):
         self.lstFields.clear()
 
         default_item = None
-        for field in self.parent.layer.dataProvider().fields():
+        for field in self.parent.layer.fields():
+            # Skip if it's not in the field types requirement
+            if field.type() not in layer_field_types:
+                continue
             field_name = field.name()
             item = QListWidgetItem(field_name, self.lstFields)
-            item.setData(QtCore.Qt.UserRole, field_name)
+            item.setData(Qt.UserRole, field_name)
             # Select the item if it match the unit's default_attribute
             if unit and 'default_attribute' in unit \
                     and field_name == unit['default_attribute']:
@@ -229,8 +272,7 @@ class StepKwField(WizardStep, FORM_CLASS):
             if self.parent.step_kw_layermode.\
                     selected_layermode() == layer_mode_continuous and unit:
                 field_type = field.type()
-                if field_type > 9 or re.match(
-                        '.{0,2}id$', field_name, re.I):
+                if field_type > 9 or re.match('.{0,2}id$', field_name, re.I):
                     continue  # Don't show unmatched field type
 
         if default_item:
@@ -261,3 +303,27 @@ class StepKwField(WizardStep, FORM_CLASS):
             self.parent.pbnNext.setEnabled(True)
         else:
             self.parent.pbnNext.setEnabled(False)
+
+    @property
+    def step_name(self):
+        """Get the human friendly name for the wizard step.
+
+        :returns: The name of the wizard step.
+        :rtype: str
+        """
+        return tr('Field Step')
+
+    def help_content(self):
+        """Return the content of help for this step wizard.
+
+            We only needs to re-implement this method in each wizard step.
+
+        :returns: A message object contains help.
+        :rtype: m.Message
+        """
+        message = m.Message()
+        message.add(m.Paragraph(tr(
+            'In this wizard step: {step_name}, you will be able to set the '
+            'field that will be used to apply the classification.'
+        ).format(step_name=self.step_name)))
+        return message

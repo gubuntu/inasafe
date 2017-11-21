@@ -1,33 +1,29 @@
 # coding=utf-8
-"""InaSAFE Keyword Wizard Step for Multi Classifications."""
+"""InaSAFE Wizard Step Multi Classifications."""
 
 import logging
-from functools import partial
 from collections import OrderedDict
-import numpy
+from functools import partial
 
+import numpy
+from PyQt4.QtCore import Qt, QPyNullVariant
 from PyQt4.QtGui import (
     QLabel, QHBoxLayout, QComboBox, QPushButton,
     QDoubleSpinBox, QGridLayout, QListWidget, QTreeWidget, QAbstractItemView,
     QListWidgetItem, QFont, QTreeWidgetItem, QSizePolicy)
-from PyQt4.QtCore import Qt, QPyNullVariant
 from PyQt4.QtWebKit import QWebView
-
 from osgeo import gdal
 from osgeo.gdalconst import GA_ReadOnly
 from qgis.core import QgsRasterBandStats
 
 import safe.messaging as m
-from safe.messaging import styles
-
-from safe.utilities.i18n import tr
 from safe.definitions.exposure import exposure_all, exposure_population
-from safe.definitions.hazard import hazard_earthquake
 from safe.definitions.font import big_font
+from safe.definitions.hazard import hazard_earthquake
+from safe.definitions.hazard_classifications import (
+    earthquake_mmi_scale)
+from safe.definitions.layer_modes import layer_mode_continuous
 from safe.definitions.layer_purposes import layer_purpose_aggregation
-from safe.gui.tools.wizard.wizard_step import (
-    WizardStep, get_wizard_step_ui_class)
-from safe.utilities.gis import is_raster_layer
 from safe.definitions.utilities import (
     definition,
     get_fields,
@@ -35,21 +31,24 @@ from safe.definitions.utilities import (
     default_classification_thresholds,
     default_classification_value_maps
 )
-from safe.definitions.hazard_classifications import (
-    earthquake_mmi_scale)
-from safe.definitions.layer_modes import layer_mode_continuous
-from safe.gui.tools.wizard.wizard_strings import (
-    multiple_classified_hazard_classifications_vector,
-    multiple_continuous_hazard_classifications_vector,
-    multiple_classified_hazard_classifications_raster,
-    multiple_continuous_hazard_classifications_raster)
-from safe.gui.tools.wizard.wizard_utils import clear_layout, skip_inasafe_field
-from safe.utilities.resources import html_footer, html_header
+from safe.gui.tools.wizard.utilities import clear_layout, skip_inasafe_field
+from safe.gui.tools.wizard.wizard_step import (
+    WizardStep, get_wizard_step_ui_class)
 from safe.gui.tools.wizard.wizard_strings import (
     continuous_raster_question,
     continuous_vector_question,
     classify_raster_question,
     classify_vector_question)
+from safe.gui.tools.wizard.wizard_strings import (
+    multiple_classified_hazard_classifications_vector,
+    multiple_continuous_hazard_classifications_vector,
+    multiple_classified_hazard_classifications_raster,
+    multiple_continuous_hazard_classifications_raster)
+from safe.messaging import styles
+from safe.utilities.gis import is_raster_layer
+from safe.utilities.i18n import tr
+from safe.utilities.resources import html_footer, html_header
+from safe.utilities.settings import setting
 
 __copyright__ = "Copyright 2016, The InaSAFE Project"
 __license__ = "GPL version 3"
@@ -72,7 +71,7 @@ MAX_VALUE_MODE = 1
 
 class StepKwMultiClassifications(WizardStep, FORM_CLASS):
 
-    """Keyword Wizard Step: Multi Classification."""
+    """InaSAFE Wizard Step Multi Classifications."""
 
     def __init__(self, parent=None):
         """Constructor for the tab.
@@ -204,16 +203,17 @@ class StepKwMultiClassifications(WizardStep, FORM_CLASS):
         row = 0
         for exposure in exposure_all:
             special_case = False
-            # Filter out unsupported exposure for the hazard
-            if exposure in hazard['disabled_exposures']:
-                # Remove from the storage if the exposure is disabled
-                if self.layer_mode == layer_mode_continuous:
-                    if exposure['key'] in self.thresholds:
-                        self.thresholds.pop(exposure['key'])
-                else:
-                    if exposure['key'] in self.value_maps:
-                        self.value_maps.pop(exposure['key'])
-                continue
+            if not setting('developer_mode'):
+                # Filter out unsupported exposure for the hazard
+                if exposure in hazard['disabled_exposures']:
+                    # Remove from the storage if the exposure is disabled
+                    if self.layer_mode == layer_mode_continuous:
+                        if exposure['key'] in self.thresholds:
+                            self.thresholds.pop(exposure['key'])
+                    else:
+                        if exposure['key'] in self.value_maps:
+                            self.value_maps.pop(exposure['key'])
+                    continue
             # Trick for EQ raster for population #3853
             if exposure == exposure_population and hazard == hazard_earthquake:
                 if is_raster_layer(self.parent.layer):
@@ -296,7 +296,8 @@ class StepKwMultiClassifications(WizardStep, FORM_CLASS):
                     # Disable if there is no classification chosen.
                     exposure_edit_button.setEnabled(False)
                 exposure_edit_button.clicked.connect(
-                    partial(self.edit_button_clicked,
+                    partial(
+                        self.edit_button_clicked,
                         edit_button=exposure_edit_button,
                         exposure_combo_box=exposure_combo_box,
                         exposure=exposure))
@@ -785,8 +786,9 @@ class StepKwMultiClassifications(WizardStep, FORM_CLASS):
                 classification['name'])
 
             dataset = gdal.Open(self.parent.layer.source(), GA_ReadOnly)
+            active_band = self.parent.step_kw_band_selector.selected_band()
             unique_values = numpy.unique(numpy.array(
-                dataset.GetRasterBand(1).ReadAsArray()))
+                dataset.GetRasterBand(active_band).ReadAsArray()))
             field_type = 0
             # Convert datatype to a json serializable type
             if numpy.issubdtype(unique_values.dtype, float):
@@ -795,10 +797,8 @@ class StepKwMultiClassifications(WizardStep, FORM_CLASS):
                 unique_values = [int(i) for i in unique_values]
         else:
             field = self.parent.step_kw_field.selected_fields()
-            field_index = self.parent.layer.dataProvider().fields(). \
-                indexFromName(field)
-            field_type = self.parent.layer.dataProvider(). \
-                fields()[field_index].type()
+            field_index = self.parent.layer.fields().indexFromName(field)
+            field_type = self.parent.layer.fields()[field_index].type()
             description_text = classify_vector_question % (
                 layer_subcategory['name'],
                 layer_purpose['name'],
@@ -1182,3 +1182,28 @@ class StepKwMultiClassifications(WizardStep, FORM_CLASS):
                 value['active'] = True
             else:
                 value['active'] = False
+
+    @property
+    def step_name(self):
+        """Get the human friendly name for the wizard step.
+
+        :returns: The name of the wizard step.
+        :rtype: str
+        """
+        return tr('Multi Classification Step')
+
+    def help_content(self):
+        """Return the content of help for this step wizard.
+
+            We only needs to re-implement this method in each wizard step.
+
+        :returns: A message object contains help.
+        :rtype: m.Message
+        """
+        message = m.Message()
+        message.add(m.Paragraph(tr(
+            'In this wizard step: {step_name}, you will be able to set the '
+            'classification that you will use per exposure type. You can also '
+            'set the threshold or value map for each classification.'
+        ).format(step_name=self.step_name)))
+        return message

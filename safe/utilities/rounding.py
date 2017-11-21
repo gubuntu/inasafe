@@ -1,10 +1,13 @@
 # coding=utf-8
+
 """Rounding and number formatting."""
 
+from decimal import Decimal
+from math import ceil, log
 
-from math import ceil
+from PyQt4.QtCore import QPyNullVariant
 
-from safe.definitions.units import unit_mapping
+from safe.definitions.units import unit_mapping, nominal_mapping
 from safe.utilities.i18n import locale
 
 __copyright__ = "Copyright 2016, The InaSAFE Project"
@@ -158,7 +161,7 @@ def rounding_full(number, is_population=False):
         rounding_number = 100
     else:
         rounding_number = 1000
-    number = int(rounding_number * ceil(1.0 * number / rounding_number))
+    number = int(rounding_number * ceil(float(number) / rounding_number))
     return number, rounding_number
 
 
@@ -253,3 +256,77 @@ def fatalities_range(number):
             return range_format.format(
                 min_range=add_separators(min_range),
                 max_range=add_separators(max_range))
+
+
+def html_scientific_notation_rate(rate):
+    """Helper for convert decimal rate using scientific notation.
+
+    For example we want to show the very detail value of fatality rate
+    because it might be a very small number.
+
+    :param rate: Rate value
+    :type rate: float
+
+    :return: Rate value with html tag to show the exponent
+    :rtype: str
+    """
+    precision = '%.3f'
+    if rate * 100 > 0:
+        decimal_rate = Decimal(precision % (rate * 100))
+        if decimal_rate == Decimal((precision % 0)):
+            decimal_rate = Decimal(str(rate * 100))
+    else:
+        decimal_rate = Decimal(str(rate * 100))
+    if decimal_rate.as_tuple().exponent >= -3:
+        rate_percentage = str(decimal_rate)
+    else:
+        rate = '%.2E' % decimal_rate
+        html_rate = rate.split('E')
+        # we use html tag to show exponent
+        html_rate[1] = '10<sup>{exponent}</sup>'.format(
+            exponent=html_rate[1])
+        html_rate.insert(1, 'x')
+        rate_percentage = ''.join(html_rate)
+    return rate_percentage
+
+
+def denomination(value, min_nominal=None):
+    """Return the denomination of a number.
+
+    :param value: The value.
+    :type value: int
+
+    :param min_nominal: Minimum value of denomination eg: 1000, 100.
+    :type min_nominal: int
+
+    :return: The new value and the denomination as a unit definition.
+    :rtype: list(int, safe.unit.definition)
+    """
+    if isinstance(value, QPyNullVariant):
+        return None
+
+    if not value:
+        return value, None
+
+    if abs(value) == nominal_mapping.keys()[0] and not min_nominal:
+        return 1 * value, nominal_mapping[nominal_mapping.keys()[0]]
+
+    # we need minimum value of denomination because we don't want to show
+    # '2 ones', '3 tens', etc.
+    index = 0
+    if min_nominal:
+        index = int(ceil(log(min_nominal, 10)))
+
+    iterator = zip(
+        nominal_mapping.keys()[index:], nominal_mapping.keys()[index + 1:])
+    for min_value, max_value in iterator:
+
+        if min_value <= abs(value) < max_value:
+            return float(value) / min_value, nominal_mapping[min_value]
+        elif abs(value) < min_value:
+            return float(value), None
+
+    max_value = nominal_mapping.keys()[-1]
+    new_value = float(value) / max_value
+    new_unit = nominal_mapping[nominal_mapping.keys()[-1]]
+    return new_value, new_unit

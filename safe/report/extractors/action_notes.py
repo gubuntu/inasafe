@@ -1,17 +1,20 @@
 # coding=utf-8
 """Module used to generate context for action and notes sections.
 """
-from safe.common.utilities import safe_dir
+
+from copy import deepcopy
 from safe.definitions.exposure import exposure_population
+from safe.definitions.utilities import definition
 from safe.report.extractors.composer import QGISComposerContext
 from safe.report.extractors.util import (
     resolve_from_dictionary,
-    layer_definition_type,
-    layer_hazard_classification,
     jinja2_output_as_string)
+from safe.utilities.metadata import active_classification
 from safe.utilities.resources import (
     resource_url,
     resources_path)
+from safe.utilities.rounding import html_scientific_notation_rate
+from safe.definitions.utilities import get_displacement_rate, is_affected
 
 __copyright__ = "Copyright 2016, The InaSAFE Project"
 __license__ = "GPL version 3"
@@ -64,23 +67,37 @@ def notes_assumptions_extractor(impact_report, component_metadata):
     .. versionadded:: 4.0
     """
     context = {}
-    hazard_layer = impact_report.hazard
-    exposure_layer = impact_report.exposure
     provenance = impact_report.impact_function.provenance
     extra_args = component_metadata.extra_args
-    exposure_type = layer_definition_type(exposure_layer)
+    hazard_keywords = provenance['hazard_keywords']
+    exposure_keywords = provenance['exposure_keywords']
+    exposure_type = definition(exposure_keywords['exposure'])
+
+    analysis_note_dict = resolve_from_dictionary(extra_args, 'analysis_notes')
+    context['items'] = [analysis_note_dict]
 
     context['header'] = resolve_from_dictionary(extra_args, 'header')
-    context['items'] = provenance['notes']
+    context['items'] += provenance['notes']
 
     # Get hazard classification
-    hazard_classification = layer_hazard_classification(hazard_layer)
+    hazard_classification = definition(
+        active_classification(hazard_keywords, exposure_keywords['exposure']))
 
     # Check hazard affected class
     affected_classes = []
     for hazard_class in hazard_classification['classes']:
-        if hazard_class.get('affected', False):
-            affected_classes.append(hazard_class)
+        if exposure_keywords['exposure'] == exposure_population['key']:
+            # Taking from profile
+            is_affected_class = is_affected(
+                hazard=hazard_keywords['hazard'],
+                classification=hazard_classification['key'],
+                hazard_class=hazard_class['key'],
+            )
+            if is_affected_class:
+                affected_classes.append(hazard_class)
+        else:
+            if hazard_class.get('affected', False):
+                affected_classes.append(hazard_class)
 
     if affected_classes:
         affected_note_dict = resolve_from_dictionary(
@@ -113,13 +130,20 @@ def notes_assumptions_extractor(impact_report, component_metadata):
             extra_args, 'displacement_rates_note_format')
 
         # generate rate description
-        hazard_note_format = resolve_from_dictionary(
+        displacement_rates_note_format = resolve_from_dictionary(
             extra_args, 'hazard_displacement_rates_note_format')
-        hazard_note = []
+        displacement_rates_note = []
         for hazard_class in hazard_classification['classes']:
-            hazard_note.append(hazard_note_format.format(**hazard_class))
+            the_hazard_class = deepcopy(hazard_class)
+            the_hazard_class['displacement_rate'] = get_displacement_rate(
+                hazard=hazard_keywords['hazard'],
+                classification=hazard_classification['key'],
+                hazard_class=the_hazard_class['key']
+            )
+            displacement_rates_note.append(
+                displacement_rates_note_format.format(**the_hazard_class))
 
-        rate_description = ', '.join(hazard_note)
+        rate_description = ', '.join(displacement_rates_note)
 
         for index, displacement_note in enumerate(
                 displacement_note_dict['item_list']):
@@ -128,6 +152,47 @@ def notes_assumptions_extractor(impact_report, component_metadata):
             )
 
         context['items'].append(displacement_note_dict)
+
+    # Check hazard have displacement rate
+    for hazard_class in hazard_classification['classes']:
+        if hazard_class.get('fatality_rate', 0) > 0:
+            have_fatality_rate = True
+            break
+    else:
+        have_fatality_rate = False
+
+    if have_fatality_rate and exposure_type == exposure_population:
+        # add notes for fatality rate used
+        fatality_note_dict = resolve_from_dictionary(
+            extra_args, 'fatality_rates_note_format')
+
+        # generate rate description
+        fatality_rates_note_format = resolve_from_dictionary(
+            extra_args, 'hazard_fatality_rates_note_format')
+        fatality_rates_note = []
+        for hazard_class in hazard_classification['classes']:
+            # we make a copy here because we don't want to
+            # change the real value.
+            copy_of_hazard_class = dict(hazard_class)
+            if not copy_of_hazard_class['fatality_rate'] > 0:
+                copy_of_hazard_class['fatality_rate'] = 0
+            else:
+                # we want to show the rate as a scientific notation
+                copy_of_hazard_class['fatality_rate'] = (
+                    html_scientific_notation_rate(
+                        copy_of_hazard_class['fatality_rate']))
+
+            fatality_rates_note.append(
+                fatality_rates_note_format.format(**copy_of_hazard_class))
+
+        rate_description = ', '.join(fatality_rates_note)
+
+        for index, fatality_note in enumerate(fatality_note_dict['item_list']):
+            fatality_note_dict['item_list'][index] = (
+                fatality_note.format(rate_description=rate_description)
+            )
+
+        context['items'].append(fatality_note_dict)
 
     return context
 
@@ -161,8 +226,7 @@ def action_checklist_report_extractor(impact_report, component_metadata):
         context[key] = jinja2_output_as_string(
             impact_report, component['key'])
 
-    resources_dir = safe_dir(sub_dir='../resources')
-    context['inasafe_resources_base_dir'] = resources_dir
+    context['inasafe_resources_base_dir'] = resources_path()
 
     return context
 

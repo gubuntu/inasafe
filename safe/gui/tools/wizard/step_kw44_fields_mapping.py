@@ -1,18 +1,20 @@
 # coding=utf-8
-"""InaSAFE Keyword Wizard Multi Fields Step."""
+"""InaSAFE Wizard Step Multi Fields."""
 
 import logging
 
-from safe_extras.parameters.parameter_exceptions import (
-    InvalidValidationException)
+from parameters.parameter_exceptions import InvalidValidationException
 
+from safe import messaging as m
 from safe.definitions.layer_purposes import (
     layer_purpose_aggregation, layer_purpose_hazard, layer_purpose_exposure)
+from safe.definitions.utilities import get_fields, get_non_compulsory_fields
+from safe.gui.tools.help.field_mapping_help import field_mapping_help_content
+from safe.gui.tools.wizard.utilities import skip_inasafe_field
 from safe.gui.tools.wizard.wizard_step import (
     WizardStep, get_wizard_step_ui_class)
-from safe.gui.tools.wizard.wizard_utils import skip_inasafe_field
-from safe.definitions.utilities import get_fields, get_non_compulsory_fields
 from safe.gui.widgets.field_mapping_widget import FieldMappingWidget
+from safe.utilities.i18n import tr
 
 __copyright__ = "Copyright 2017, The InaSAFE Project"
 __license__ = "GPL version 3"
@@ -25,7 +27,7 @@ LOGGER = logging.getLogger('InaSAFE')
 
 class StepKwFieldsMapping(WizardStep, FORM_CLASS):
 
-    """InaSAFE Keyword Wizard Field Mapping Step."""
+    """InaSAFE Wizard Step Multi Fields."""
 
     def __init__(self, parent=None):
         """Constructor for the tab.
@@ -67,14 +69,16 @@ class StepKwFieldsMapping(WizardStep, FORM_CLASS):
         if subcategory.get('classifications'):
             if layer_purpose == layer_purpose_hazard:
                 return self.parent.step_kw_multi_classifications
-            elif layer_purpose == layer_purpose_exposure:
-                return self.parent.step_kw_classification
 
         # Check if it can go to inasafe field step
         non_compulsory_fields = get_non_compulsory_fields(
             layer_purpose['key'], subcategory['key'])
         if not skip_inasafe_field(self.parent.layer, non_compulsory_fields):
-            return self.parent.step_kw_inasafe_fields
+            # Do not go to InaSAFE Field step if we already visited it.
+            # For example in place exposure.
+            if (self.parent.step_kw_inasafe_fields not in
+                    self.parent.keyword_steps):
+                return self.parent.step_kw_inasafe_fields
 
         # Check if it can go to inasafe default field step
         default_inasafe_fields = get_fields(
@@ -129,3 +133,28 @@ class StepKwFieldsMapping(WizardStep, FORM_CLASS):
     def clear(self):
         """Helper to clear the state of the step."""
         self.field_mapping_widget.delete_tabs()
+
+    @property
+    def step_name(self):
+        """Get the human friendly name for the wizard step.
+
+        :returns: The name of the wizard step.
+        :rtype: str
+        """
+        return tr('Field Mapping Step')
+
+    def help_content(self):
+        """Return the content of help for this step wizard.
+
+            We only needs to re-implement this method in each wizard step.
+
+        :returns: A message object contains help.
+        :rtype: m.Message
+        """
+        message = m.Message()
+        message.add(m.Paragraph(tr(
+            'In this wizard step: {step_name}, you will be able to define '
+            'field mappings to use for demographic breakdowns of your '
+            'analysis results.').format(step_name=self.step_name)))
+        message.add(field_mapping_help_content())
+        return message

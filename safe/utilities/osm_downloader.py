@@ -1,20 +1,21 @@
 # coding=utf-8
 """OSM Downloader tool."""
 
-import zipfile
-import os
 import logging
+import os
 import tempfile
+import zipfile
 
-from PyQt4.QtNetwork import QNetworkReply
 from PyQt4.QtGui import QDialog
-from PyQt4.QtCore import QSettings
+from PyQt4.QtNetwork import QNetworkReply
 
-from safe.utilities.i18n import tr, locale
-from safe.utilities.gis import qgis_version
-from safe.utilities.file_downloader import FileDownloader
 from safe.common.exceptions import DownloadError, CanceledImportDialogError
-from safe.common.version import get_version, release_status
+from safe.common.version import get_version
+from safe.definitions.versions import inasafe_release_status
+from safe.utilities.file_downloader import FileDownloader
+from safe.utilities.gis import qgis_version
+from safe.utilities.i18n import tr, locale
+from safe.utilities.settings import setting
 
 __copyright__ = "Copyright 2016, The InaSAFE Project"
 __license__ = "GPL version 3"
@@ -23,9 +24,8 @@ __revision__ = '$Format:%H$'
 
 # If it's not a final release and the developer mode is ON, we use the staging
 # version for OSM-Reporter.
-final_release = release_status() == 'final'
-settings = QSettings()
-developer_mode = settings.value('inasafe/developer_mode', False, type=bool)
+final_release = inasafe_release_status == 'final'
+developer_mode = setting('developer_mode', False, expected_type=bool)
 if not final_release and developer_mode:
     URL_OSM_PREFIX = 'http://staging.osm.kartoza.com/'
 else:

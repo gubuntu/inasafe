@@ -2,19 +2,20 @@
 """Example usage of custom parameters."""
 
 import sys
+
 from safe.test.utilities import get_qgis_app
 
 QGIS_APP, CANVAS, IFACE, PARENT = get_qgis_app()
 
-from PyQt4.QtGui import QApplication, QWidget, QGridLayout
+from PyQt4.QtGui import QApplication, QWidget, QGridLayout  # NOQA
 
-from safe_extras.parameters.qt_widgets.parameter_container import (
-    ParameterContainer)
+from parameters.qt_widgets.parameter_container import (
+    ParameterContainer)  # NOQA
 
 from safe.common.parameters.default_value_parameter import (
-    DefaultValueParameter)
+    DefaultValueParameter)  # NOQA
 from safe.common.parameters.default_value_parameter_widget import (
-    DefaultValueParameterWidget)
+    DefaultValueParameterWidget)  # NOQA
 
 
 __copyright__ = "Copyright 2016, The InaSAFE Project"
@@ -32,7 +33,7 @@ def main():
     default_value_parameter.help_text = 'Help text'
     default_value_parameter.description = 'Description'
     default_value_parameter.labels = [
-        'Setting', 'Do not use', 'Custom']
+        'Setting', 'Do not report', 'Custom']
     default_value_parameter.options = [0, 1, None]
 
     parameters = [

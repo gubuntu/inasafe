@@ -3,22 +3,28 @@
 
 import sys
 from collections import OrderedDict
+
 from safe.test.utilities import get_qgis_app
 
 QGIS_APP, CANVAS, IFACE, PARENT = get_qgis_app()
 
-from PyQt4.QtGui import QApplication, QWidget, QGridLayout
+from PyQt4.QtGui import QApplication, QWidget, QGridLayout  # NOQA
 
-from safe_extras.parameters.qt_widgets.parameter_container import (
-    ParameterContainer)
+from parameters.qt_widgets.parameter_container import (
+    ParameterContainer)  # NOQA
 
 from safe.common.parameters.group_select_parameter import (
-    GroupSelectParameter)
+    GroupSelectParameter)  # NOQA
 from safe.common.parameters.group_select_parameter_widget import (
-    GroupSelectParameterWidget)
+    GroupSelectParameterWidget)  # NOQA
 from safe.definitions.constants import (
-    DO_NOT_USE, CUSTOM_VALUE, GLOBAL_DEFAULT, FIELDS, STATIC, SINGLE_DYNAMIC,
-    MULTIPLE_DYNAMIC)
+    DO_NOT_REPORT,
+    CUSTOM_VALUE,
+    GLOBAL_DEFAULT,
+    FIELDS,
+    STATIC,
+    SINGLE_DYNAMIC,
+    MULTIPLE_DYNAMIC)  # NOQA
 
 __copyright__ = "Copyright 2017, The InaSAFE Project"
 __license__ = "GPL version 3"
@@ -31,9 +37,9 @@ def main():
     app = QApplication([])
 
     options = OrderedDict([
-        (DO_NOT_USE,
+        (DO_NOT_REPORT,
          {
-             'label': 'Do not use',
+             'label': 'Do not report',
              'value': None,
              'type': STATIC,
              'constraint': {}

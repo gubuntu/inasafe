@@ -1,5 +1,9 @@
 # coding=utf-8
+
 """Module used to generate context for analysis detail section."""
+
+import logging
+
 from safe.definitions.exposure import exposure_all, exposure_population
 from safe.definitions.fields import (
     exposure_type_field,
@@ -7,35 +11,38 @@ from safe.definitions.fields import (
     hazard_count_field,
     total_affected_field,
     total_not_affected_field,
-    total_field, total_not_exposed_field)
+    total_field, total_not_exposed_field, affected_field)
+from safe.definitions.utilities import definition
 from safe.report.extractors.util import (
-    layer_definition_type,
     resolve_from_dictionary,
     value_from_field_name,
-    layer_hazard_classification,
     retrieve_exposure_classes_lists)
 from safe.utilities.i18n import tr
+from safe.utilities.metadata import active_classification
 from safe.utilities.rounding import format_number
+from safe.utilities.settings import setting
 
 __copyright__ = "Copyright 2016, The InaSAFE Project"
 __license__ = "GPL version 3"
 __email__ = "info@inasafe.org"
 __revision__ = ':%H$'
 
+LOGGER = logging.getLogger('InaSAFE')
+
 
 def analysis_detail_extractor(impact_report, component_metadata):
     """Extracting analysis result from the impact layer.
 
-    :param impact_report: the impact report that acts as a proxy to fetch
-        all the data that extractor needed
+    :param impact_report: The impact report that acts as a proxy to fetch
+        all the data that extractor needed.
     :type impact_report: safe.report.impact_report.ImpactReport
 
-    :param component_metadata: the component metadata. Used to obtain
-        information about the component we want to render
+    :param component_metadata: The component metadata. Used to obtain
+        information about the component we want to render.
     :type component_metadata: safe.report.report_metadata.
         ReportComponentsMetadata
 
-    :return: context for rendering phase
+    :return: Context for rendering phase.
     :rtype: dict
 
     .. versionadded:: 4.0
@@ -43,8 +50,6 @@ def analysis_detail_extractor(impact_report, component_metadata):
     context = {}
     extra_args = component_metadata.extra_args
 
-    hazard_layer = impact_report.hazard
-    exposure_layer = impact_report.exposure
     analysis_layer = impact_report.analysis
     analysis_layer_fields = analysis_layer.keywords['inasafe_fields']
     analysis_feature = analysis_layer.getFeatures().next()
@@ -54,14 +59,17 @@ def analysis_detail_extractor(impact_report, component_metadata):
             'inasafe_fields']
     provenance = impact_report.impact_function.provenance
     debug_mode = impact_report.impact_function.debug_mode
+    hazard_keywords = provenance['hazard_keywords']
+    exposure_keywords = provenance['exposure_keywords']
 
-    """Initializations"""
+    """Initializations."""
 
     # Get hazard classification
-    hazard_classification = layer_hazard_classification(hazard_layer)
+    hazard_classification = definition(
+        active_classification(hazard_keywords, exposure_keywords['exposure']))
 
     # Get exposure type definition
-    exposure_type = layer_definition_type(exposure_layer)
+    exposure_type = definition(exposure_keywords['exposure'])
     # Only round the number when it is population exposure and it is not
     # in debug mode
     is_rounding = not debug_mode
@@ -88,7 +96,7 @@ def analysis_detail_extractor(impact_report, component_metadata):
             breakdown_field = field
             break
 
-    """Create detail header"""
+    """Create detail header."""
     headers = []
 
     # breakdown header
@@ -178,7 +186,7 @@ def analysis_detail_extractor(impact_report, component_metadata):
     for report_field in report_fields[2:]:
         headers.append(report_field['name'])
 
-    """Create detail rows"""
+    """Create detail rows."""
     details = []
     for feat in exposure_summary_table.getFeatures():
         row = []
@@ -245,9 +253,13 @@ def analysis_detail_extractor(impact_report, component_metadata):
                 total_count,
                 enable_rounding=is_rounding,
                 is_population=is_population)
-            if total_count == '0' and field == total_affected_field:
-                skip_row = True
-                break
+
+            # we comment below code because now we want to show all rows,
+            # we can uncomment if we want to remove the rows with zero total
+
+            # if total_count == '0' and field == total_affected_field:
+            #     skip_row = True
+            #     break
 
             if group_key:
                 if field == total_affected_field:
@@ -278,7 +290,7 @@ def analysis_detail_extractor(impact_report, component_metadata):
         details.append(row)
 
     # retrieve classes definitions
-    exposure_classes_lists = retrieve_exposure_classes_lists(exposure_layer)
+    exposure_classes_lists = retrieve_exposure_classes_lists(exposure_keywords)
 
     # sort detail rows based on class order
     # create function to sort
@@ -313,7 +325,7 @@ def analysis_detail_extractor(impact_report, component_metadata):
         # replace class_key with the class name
         row[0] = breakdown_name
 
-    """create total footers"""
+    """create total footers."""
     # create total header
     footers = [total_field['name']]
     # total for hazard
@@ -357,6 +369,12 @@ def analysis_detail_extractor(impact_report, component_metadata):
                 row = details[row_idx]
                 row = row[:column_index] + row[column_index + 1:]
                 details[row_idx] = row
+            # reduce total affected and not affected column index by 1
+            # since we are removing a column
+            if group_key == affected_field['field_name']:
+                affected_header_index -= 1
+            else:
+                not_affected_header_index -= 1
             continue
         footers.append({
             'value': count_value,
@@ -430,7 +448,7 @@ def analysis_detail_extractor(impact_report, component_metadata):
         group_key = None
         for key, group in header_hazard_group.iteritems():
             if hazard_class_name in group['hazards'] or (
-                        hazard_class_name in group['total']):
+                    hazard_class_name in group['total']):
                 group_key = key
                 break
 
@@ -480,5 +498,86 @@ def analysis_detail_extractor(impact_report, component_metadata):
         'details': details,
         'footers': footers,
     }
+
+    context['extra_table'] = {}
+
+    # extra table for specific exposure if exist
+    extra_fields = resolve_from_dictionary(extra_args, 'exposure_extra_fields')
+    if exposure_type['key'] in extra_fields.keys():
+
+        # create header for the extra table
+        extra_table_header_format = resolve_from_dictionary(
+            extra_args, 'extra_table_header_format')
+        extra_table_header = extra_table_header_format.format(
+            exposure=exposure_header)
+
+        # headers
+        headers = []
+        headers.append(
+            breakdown_header_template.format(exposure=exposure_header))
+
+        current_unit = None
+        currency_unit = setting('currency', expected_type=str)
+        for field in extra_fields[exposure_type['key']]:
+            field_index = exposure_summary_table.fieldNameIndex(
+                field['field_name'])
+            if field_index < 0:
+                LOGGER.debug(
+                    'Field name not found: %s, field index: %s' % (
+                        field['field_name'], field_index))
+                continue
+
+            units = field.get('units')
+            if units:
+                for unit in units:
+                    if currency_unit == unit['key']:
+                        current_unit = unit['name']
+                        break
+                if not current_unit:
+                    current_unit = units[0]['name']
+
+            header_format = '{header} ({unit})'
+            headers.append(header_format.format(
+                header=field['header_name'], unit=current_unit))
+
+        # rows
+        details = []
+        for feat in exposure_summary_table.getFeatures():
+            row = []
+
+            # Get breakdown name
+            exposure_summary_table_field_name = breakdown_field['field_name']
+            field_index = exposure_summary_table.fieldNameIndex(
+                exposure_summary_table_field_name)
+            class_key = feat[field_index]
+
+            row.append(class_key)
+
+            for field in extra_fields[exposure_type['key']]:
+                field_index = exposure_summary_table.fieldNameIndex(
+                    field['field_name'])
+                # noinspection PyBroadException
+                try:
+                    total_count = int(float(feat[field_index]))
+                except:
+                    LOGGER.debug(
+                        'Field name not found: %s, field index: %s' % (
+                            field['field_name'], field_index))
+                    continue
+                total_count = format_number(
+                    total_count,
+                    enable_rounding=is_rounding,
+                    is_population=is_population)
+                row.append(total_count)
+
+            details.append(row)
+
+        details = sorted(details, key=sort_classes)
+
+        context['extra_table'] = {
+            'table_header': extra_table_header,
+            'headers': headers,
+            'details': details,
+        }
 
     return context
